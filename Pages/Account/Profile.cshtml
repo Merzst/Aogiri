@@ -1,0 +1,39 @@
+@page "{userId:int}"
+@model Aogiri.Pages.Account.ProfileModel
+@{ ViewData["Title"] = "Профиль продавца"; Layout = "_Layout"; }
+
+@if(Model.ProfileUser == null){
+<div class="empty-state" style="padding:5rem;"><i class="bi bi-person-x"></i><p>Пользователь не найден</p></div>
+} else {
+<div style="max-width:900px;margin:2rem auto;padding:0 1.5rem;">
+  <div style="display:flex;gap:1.5rem;align-items:flex-start;flex-wrap:wrap;">
+    <div class="aogiri-card" style="width:260px;flex-shrink:0;padding:1.5rem;text-align:center;">
+      <div class="profile-avatar-lg" style="margin:0 auto 1rem;">@Model.ProfileUser.Name[0]</div>
+      <div style="font-weight:700;font-size:1.1rem;color:#fff;">@Model.ProfileUser.Name</div>
+      <div style="color:#666;font-size:0.82rem;margin-top:4px;">На Aogiri с @Model.ProfileUser.RegDate.ToString("MMMM yyyy")</div>
+      <div style="margin-top:1rem;display:flex;justify-content:center;gap:1.5rem;">
+        <div class="stat-box" style="flex:1;"><div class="stat-num">@Model.Ads.Count</div><div class="stat-label">Объявлений</div></div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div class="section-title"><i class="bi bi-megaphone" style="color:#8B0000;"></i> Объявления продавца</div>
+      @if(!Model.Ads.Any()){
+      <div class="empty-state"><i class="bi bi-megaphone"></i><p>Нет активных объявлений</p></div>
+      } else {
+      <div class="ads-grid">
+        @foreach(var ad in Model.Ads){
+        <a class="ad-card" asp-page="/Ads/Detail" asp-route-id="@ad.AdID">
+          <div class="ad-card-img">@if(!string.IsNullOrEmpty(ad.ImageUrl)){<img src="@ad.ImageUrl" alt="@ad.Title">}else{<i class="bi bi-image"></i>}</div>
+          <div class="ad-card-body">
+            <div class="ad-card-price">@ad.Price.ToString("N0") руб.</div>
+            <div class="ad-card-title">@ad.Title</div>
+            <div class="ad-card-meta"><span><i class="bi bi-geo-alt"></i> @ad.Location.City</span></div>
+          </div>
+        </a>
+        }
+      </div>
+      }
+    </div>
+  </div>
+</div>
+}

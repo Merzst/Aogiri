@@ -1,0 +1,48 @@
+@page
+@model Aogiri.Pages.Account.RegisterModel
+@{ ViewData["Title"] = "Регистрация"; Layout = "_Layout"; }
+
+<div style="min-height:60vh;display:flex;align-items:center;justify-content:center;padding:2rem;">
+  <div style="width:100%;max-width:420px;">
+    <div class="aogiri-card">
+      <div class="aogiri-card-header" style="justify-content:center;padding:1.2rem;">
+        <i class="bi bi-person-plus" style="color:#8B0000;font-size:1.3rem;"></i>
+        <span style="font-size:1.1rem;margin-left:8px;">Создать аккаунт</span>
+      </div>
+      <div class="aogiri-card-body" style="padding:1.5rem;">
+        @if(Model.ErrorMessage != null){
+        <div class="alert-aogiri alert-danger-aogiri"><i class="bi bi-exclamation-circle"></i> @Model.ErrorMessage</div>
+        }
+        <form method="post">
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Логин <span style="color:#c0392b">*</span></label>
+            <input asp-for="Login" class="form-control-aogiri" placeholder="Уникальный логин">
+          </div>
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Имя / Псевдоним <span style="color:#c0392b">*</span></label>
+            <input asp-for="Name" class="form-control-aogiri" placeholder="Как вас называть">
+          </div>
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Телефон <span style="color:#c0392b">*</span></label>
+            <input asp-for="Phone" class="form-control-aogiri" placeholder="+375291234567">
+          </div>
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Email <span style="color:#555">(необязательно)</span></label>
+            <input asp-for="Email" type="email" class="form-control-aogiri" placeholder="your@email.com">
+          </div>
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Пароль <span style="color:#c0392b">*</span></label>
+            <input asp-for="Password" type="password" class="form-control-aogiri" placeholder="Минимум 4 символа">
+          </div>
+          <button type="submit" class="btn-aogiri-primary" style="width:100%;justify-content:center;padding:0.7rem;">
+            <i class="bi bi-person-plus"></i> Зарегистрироваться
+          </button>
+        </form>
+        <div class="divider"></div>
+        <div style="text-align:center;color:#666;font-size:0.85rem;">
+          Уже есть аккаунт? <a asp-page="/Account/Login" style="color:#c0392b;">Войти</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,71 @@
+@page
+@model Aogiri.Pages.Messages.IndexModel
+@{ ViewData["Title"] = "Сообщения"; Layout = "_Layout"; }
+
+<div style="max-width:1100px;margin:2rem auto;padding:0 1.5rem;">
+  <div class="section-title"><i class="bi bi-chat" style="color:#8B0000;"></i> Сообщения</div>
+  <div style="display:flex;gap:1rem;height:calc(100vh - 200px);min-height:500px;">
+
+    <!-- Conversations list -->
+    <div class="aogiri-card" style="width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+      <div class="aogiri-card-header"><i class="bi bi-people"></i> Диалоги</div>
+      <div style="overflow-y:auto;flex:1;">
+        @if(!Model.Conversations.Any()){
+        <div class="empty-state" style="padding:2rem 1rem;"><i class="bi bi-chat-dots"></i><p style="font-size:0.85rem;">Нет диалогов</p></div>
+        }
+        @foreach(var conv in Model.Conversations){
+        <a class="conversation-list-item @(Model.PartnerID == conv.Partner.UserID ? "active" : "")"
+           href="/Messages?partnerId=@conv.Partner.UserID">
+          <div class="avatar-circle" style="width:38px;height:38px;font-size:0.9rem;">@conv.Partner.Name[0]</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.87rem;font-weight:600;color:#e8e8e8;">@conv.Partner.Name</div>
+            <div style="font-size:0.78rem;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@conv.LastMessage.Text</div>
+          </div>
+          @if(conv.UnreadCount > 0){<span class="unread-badge">@conv.UnreadCount</span>}
+        </a>
+        }
+      </div>
+    </div>
+
+    <!-- Chat area -->
+    <div class="aogiri-card" style="flex:1;display:flex;flex-direction:column;min-width:0;">
+      @if(Model.CurrentPartner != null){
+      <div class="aogiri-card-header">
+        <div class="avatar-circle" style="width:30px;height:30px;font-size:0.8rem;">@Model.CurrentPartner.Name[0]</div>
+        @Model.CurrentPartner.Name
+      </div>
+      <div class="chat-container">
+        @{var myId = HttpContext.Session.GetInt32("UserId");}
+        @foreach(var msg in Model.CurrentMessages){
+        <div>
+          <div class="msg-bubble @(msg.SenderID == myId ? "msg-bubble-sent" : "msg-bubble-recv")">
+            @if(msg.Advertisement != null){
+            <div style="font-size:0.72rem;opacity:0.7;margin-bottom:3px;"><i class="bi bi-megaphone"></i> По объявлению: @msg.Advertisement.Title</div>
+            }
+            @msg.Text
+            <span class="msg-time">@msg.SentDate.ToString("HH:mm · dd.MM")</span>
+          </div>
+        </div>
+        }
+      </div>
+      <div style="padding:0.75rem;border-top:1px solid #3a3a3a;">
+        <form method="post" asp-page-handler="Reply" asp-route-partnerId="@Model.PartnerID" style="display:flex;gap:0.5rem;">
+          <input name="ReplyText" class="form-control-aogiri" style="flex:1;" placeholder="Написать сообщение...">
+          <button type="submit" class="btn-aogiri-primary"><i class="bi bi-send"></i></button>
+        </form>
+      </div>
+      } else {
+      <div class="empty-state" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <i class="bi bi-chat" style="font-size:2.5rem;color:#333;"></i>
+        <p style="color:#555;margin-top:0.8rem;">Выберите диалог для просмотра</p>
+      </div>
+      }
+    </div>
+  </div>
+</div>
+
+<script>
+// Auto-scroll to bottom of chat
+const chat = document.querySelector('.chat-container');
+if(chat) chat.scrollTop = chat.scrollHeight;
+</script>

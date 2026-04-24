@@ -1,0 +1,155 @@
+@page
+@model Aogiri.Pages.Admin.IndexModel
+@{ ViewData["Title"] = "Панель администратора"; Layout = "_Layout"; }
+
+<div style="max-width:1200px;margin:2rem auto;padding:0 1.5rem;">
+  <div class="section-title"><i class="bi bi-gear" style="color:#8B0000;"></i> Панель администратора</div>
+
+  <!-- Stats -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
+    <div class="admin-stat-card">
+      <div class="admin-stat-icon red"><i class="bi bi-people"></i></div>
+      <div><div class="admin-stat-num">@Model.TotalUsers</div><div class="admin-stat-label">Пользователей</div></div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="admin-stat-icon green"><i class="bi bi-megaphone"></i></div>
+      <div><div class="admin-stat-num">@Model.ActiveAds</div><div class="admin-stat-label">Активных объявлений</div></div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="admin-stat-icon yellow"><i class="bi bi-hourglass"></i></div>
+      <div><div class="admin-stat-num">@Model.PendingAds</div><div class="admin-stat-label">На модерации</div></div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="admin-stat-icon blue"><i class="bi bi-collection"></i></div>
+      <div><div class="admin-stat-num">@Model.TotalAds</div><div class="admin-stat-label">Всего объявлений</div></div>
+    </div>
+  </div>
+
+  <div class="aogiri-tabs">
+    <a class="aogiri-tab @(Model.Tab=="categories"?"active":"")" href="?tab=categories"><i class="bi bi-tags"></i> Категории</a>
+    <a class="aogiri-tab @(Model.Tab=="rules"?"active":"")" href="?tab=rules"><i class="bi bi-shield"></i> Правила модерации</a>
+    <a class="aogiri-tab @(Model.Tab=="logs"?"active":"")" href="?tab=logs"><i class="bi bi-journal-text"></i> Логи</a>
+  </div>
+
+  @if(Model.Tab == "categories"){
+  <div style="display:flex;gap:1rem;align-items:flex-start;">
+    <div class="aogiri-card" style="flex:1;">
+      <div class="aogiri-card-header"><i class="bi bi-list-ul"></i> Список категорий</div>
+      <table class="aogiri-table">
+        <thead><tr><th>Иконка</th><th>Название</th><th>Объявлений</th><th>Действие</th></tr></thead>
+        <tbody>
+        @foreach(var cat in Model.Categories){
+        <tr>
+          <td><i class="bi @cat.IconClass" style="color:#c0392b;"></i></td>
+          <td style="font-weight:500;">@cat.Name</td>
+          <td style="color:#666;">@cat.Advertisements.Count</td>
+          <td>
+            <form method="post" asp-page-handler="DeleteCategory" style="margin:0;" onsubmit="return confirm('Удалить категорию «@cat.Name»?')">
+              <input type="hidden" name="catId" value="@cat.CategoryID">
+              <button type="submit" class="btn-aogiri-danger btn-aogiri-sm"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        }
+        </tbody>
+      </table>
+    </div>
+    <div class="aogiri-card" style="width:280px;flex-shrink:0;">
+      <div class="aogiri-card-header"><i class="bi bi-plus-circle"></i> Добавить категорию</div>
+      <div class="aogiri-card-body">
+        <form method="post" asp-page-handler="AddCategory">
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Название *</label>
+            <input asp-for="CategoryName" class="form-control-aogiri" placeholder="Например: Животные">
+          </div>
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Bootstrap Icon класс</label>
+            <input asp-for="CategoryIcon" class="form-control-aogiri" placeholder="bi-tag">
+            <div style="font-size:0.72rem;color:#555;margin-top:4px;">Пример: bi-car-front, bi-house</div>
+          </div>
+          <button type="submit" class="btn-aogiri-primary" style="width:100%;justify-content:center;"><i class="bi bi-plus"></i> Добавить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  }
+
+  @if(Model.Tab == "rules"){
+  <div style="display:flex;gap:1rem;align-items:flex-start;">
+    <div class="aogiri-card" style="flex:1;">
+      <div class="aogiri-card-header"><i class="bi bi-list-check"></i> Запрещённые фразы</div>
+      @if(!Model.Rules.Any()){
+      <div class="empty-state" style="padding:2rem;"><i class="bi bi-shield"></i><p>Правил нет</p></div>
+      } else {
+      <table class="aogiri-table">
+        <thead><tr><th>Фраза</th><th>Добавлено</th><th>Удалить</th></tr></thead>
+        <tbody>
+        @foreach(var rule in Model.Rules){
+        <tr>
+          <td style="font-family:monospace;color:#c0392b;">@rule.Phrase</td>
+          <td style="color:#666;font-size:0.82rem;">@rule.CreatedAt.ToString("dd.MM.yyyy")</td>
+          <td>
+            <form method="post" asp-page-handler="DeleteRule" style="margin:0;" onsubmit="return confirm('Удалить правило?')">
+              <input type="hidden" name="ruleId" value="@rule.RuleID">
+              <button type="submit" class="btn-aogiri-danger btn-aogiri-sm"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        }
+        </tbody>
+      </table>
+      }
+    </div>
+    <div class="aogiri-card" style="width:280px;flex-shrink:0;">
+      <div class="aogiri-card-header"><i class="bi bi-plus-circle"></i> Добавить правило</div>
+      <div class="aogiri-card-body">
+        <form method="post" asp-page-handler="AddRule">
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Запрещённая фраза *</label>
+            <input asp-for="RulePhrase" class="form-control-aogiri" placeholder="Например: только пересылка">
+          </div>
+          <button type="submit" class="btn-aogiri-primary" style="width:100%;justify-content:center;"><i class="bi bi-plus"></i> Добавить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  }
+
+  @if(Model.Tab == "logs"){
+  <div class="aogiri-card">
+    <div class="aogiri-card-header" style="justify-content:space-between;">
+      <span><i class="bi bi-journal"></i> Логи действий (@Model.Logs.Count)</span>
+      <form method="post" asp-page-handler="ClearLogs" style="margin:0;" onsubmit="return confirm('Очистить все логи?')">
+        <button type="submit" class="btn-aogiri-danger btn-aogiri-sm"><i class="bi bi-trash"></i> Очистить всё</button>
+      </form>
+    </div>
+    @if(!Model.Logs.Any()){
+    <div class="empty-state" style="padding:2rem;"><i class="bi bi-journal-text"></i><p>Логов нет</p></div>
+    } else {
+    <table class="aogiri-table">
+      <thead><tr><th>Время</th><th>Пользователь</th><th>Действие</th><th>Детали</th><th>Итог</th><th></th></tr></thead>
+      <tbody>
+      @foreach(var log in Model.Logs){
+      <tr>
+        <td style="color:#666;font-size:0.8rem;white-space:nowrap;">@log.Timestamp.ToString("dd.MM HH:mm")</td>
+        <td style="font-size:0.85rem;">@(log.User?.Name ?? "Система")</td>
+        <td style="font-size:0.85rem;font-weight:500;">@log.Action</td>
+        <td style="color:#888;font-size:0.8rem;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@log.Details</td>
+        <td>
+          @if(log.Result == "Success"){<span style="color:#2ecc71;font-size:0.78rem;"><i class="bi bi-check"></i> OK</span>}
+          else{<span style="color:#e74c3c;font-size:0.78rem;"><i class="bi bi-x"></i> Error</span>}
+        </td>
+        <td>
+          <form method="post" asp-page-handler="DeleteLog" style="margin:0;">
+            <input type="hidden" name="logId" value="@log.LogID">
+            <button type="submit" class="btn-aogiri-outline btn-aogiri-sm"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </div>
+  }
+</div>

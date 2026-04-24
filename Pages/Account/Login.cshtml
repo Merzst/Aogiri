@@ -1,0 +1,39 @@
+@page
+@model Aogiri.Pages.Account.LoginModel
+@{ ViewData["Title"] = "Авторизация"; Layout = "_Layout"; }
+
+<div style="min-height:60vh;display:flex;align-items:center;justify-content:center;padding:2rem;">
+  <div style="width:100%;max-width:400px;">
+    <div class="aogiri-card">
+      <div class="aogiri-card-header" style="justify-content:center;padding:1.2rem;">
+        <i class="bi bi-broadcast" style="color:#8B0000;font-size:1.3rem;"></i>
+        <span style="font-size:1.1rem;margin-left:8px;">Вход в Aogiri</span>
+      </div>
+      <div class="aogiri-card-body" style="padding:1.5rem;">
+        @if(Model.ErrorMessage != null){
+        <div class="alert-aogiri alert-danger-aogiri"><i class="bi bi-exclamation-circle"></i> @Model.ErrorMessage</div>
+        }
+        <form method="post">
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Логин</label>
+            <input asp-for="Login" class="form-control-aogiri" placeholder="Ваш логин" autocomplete="username">
+          </div>
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Пароль</label>
+            <input asp-for="Password" type="password" class="form-control-aogiri" placeholder="••••••••" autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn-aogiri-primary" style="width:100%;justify-content:center;padding:0.7rem;">
+            <i class="bi bi-box-arrow-in-right"></i> Войти
+          </button>
+        </form>
+        <div class="divider"></div>
+        <div style="text-align:center;color:#666;font-size:0.85rem;">
+          Нет аккаунта? <a asp-page="/Account/Register" style="color:#c0392b;">Зарегистрироваться</a>
+        </div>
+        <div style="text-align:center;margin-top:0.8rem;font-size:0.78rem;color:#555;">
+          Тест: admin/admin9999 · moder/moder5678 · user1/1234
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

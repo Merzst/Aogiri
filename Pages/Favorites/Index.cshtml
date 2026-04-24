@@ -1,0 +1,35 @@
+@page
+@model Aogiri.Pages.Favorites.IndexModel
+@{ ViewData["Title"] = "Избранное"; Layout = "_Layout"; }
+
+<div style="max-width:1100px;margin:2rem auto;padding:0 1.5rem;">
+  <div class="section-title"><i class="bi bi-heart" style="color:#8B0000;"></i> Избранное (@Model.Favorites.Count)</div>
+  @if(!Model.Favorites.Any()){
+  <div class="empty-state"><i class="bi bi-heart"></i><p>Нет сохранённых объявлений</p>
+    <a asp-page="/Index" class="btn-aogiri-primary"><i class="bi bi-search"></i> Перейти к поиску</a>
+  </div>
+  } else {
+  <div class="ads-grid">
+    @foreach(var fav in Model.Favorites){
+    var ad = fav.Advertisement;
+    <div style="position:relative;">
+      <a class="ad-card" asp-page="/Ads/Detail" asp-route-id="@ad.AdID" style="display:flex;flex-direction:column;">
+        <div class="ad-card-img">
+          @if(!string.IsNullOrEmpty(ad.ImageUrl)){<img src="@ad.ImageUrl" alt="@ad.Title" loading="lazy">}
+          else{<i class="bi bi-image"></i>}
+        </div>
+        <div class="ad-card-body">
+          <div class="ad-card-price">@ad.Price.ToString("N0") руб.</div>
+          <div class="ad-card-title">@ad.Title</div>
+          <div class="ad-card-meta"><span><i class="bi bi-geo-alt"></i> @ad.Location.City</span></div>
+        </div>
+      </a>
+      <form method="post" asp-page-handler="Remove" style="position:absolute;top:8px;right:8px;margin:0;">
+        <input type="hidden" name="favId" value="@fav.FavoriteID">
+        <button type="submit" class="fav-btn active" title="Удалить из избранного"><i class="bi bi-heart-fill"></i></button>
+      </form>
+    </div>
+    }
+  </div>
+  }
+</div>

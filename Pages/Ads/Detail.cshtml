@@ -1,0 +1,116 @@
+@page "{id:int}"
+@model Aogiri.Pages.Ads.DetailModel
+@{ ViewData["Title"] = Model.Ad?.Title ?? "Объявление"; Layout = "_Layout"; }
+
+@if(Model.Ad == null){
+<div class="empty-state" style="padding:5rem;"><i class="bi bi-exclamation-circle"></i><p>Объявление не найдено</p></div>
+} else {
+<div style="max-width:1100px;margin:2rem auto;padding:0 1.5rem;">
+  <div style="display:flex;gap:1.5rem;align-items:flex-start;flex-wrap:wrap;">
+
+    <!-- Main -->
+    <div style="flex:1;min-width:0;">
+      <div class="aogiri-card">
+        <div class="aogiri-card-body" style="padding:1.5rem;">
+          <!-- Image -->
+          <div class="ad-detail-img" style="margin-bottom:1.2rem;">
+            @if(!string.IsNullOrEmpty(Model.Ad.ImageUrl)){
+            <img src="@Model.Ad.ImageUrl" alt="@Model.Ad.Title" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
+            } else {<i class="bi bi-image"></i>}
+          </div>
+
+          <!-- Title & Price -->
+          <div class="ad-detail-price">@Model.Ad.Price.ToString("N0") руб.</div>
+          <h1 class="ad-detail-title" style="margin:0.5rem 0 1rem;">@Model.Ad.Title</h1>
+
+          <!-- Meta pills -->
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+            <span class="info-pill"><i class="bi bi-grid"></i> @Model.Ad.Category.Name</span>
+            <span class="info-pill"><i class="bi bi-geo-alt"></i> @Model.Ad.Location.City</span>
+            <span class="info-pill"><i class="bi bi-clock"></i> @Model.Ad.PublishedDate.ToString("dd.MM.yyyy")</span>
+            <span class="info-pill"><i class="bi bi-eye"></i> @Model.Ad.ViewCount просмотров</span>
+          </div>
+
+          <!-- Status -->
+          @{
+            var (statusCls, statusLbl) = Model.Ad.Status switch {
+              "Active" => ("badge-active","Активно"),
+              "Pending" => ("badge-pending","На модерации"),
+              "Rejected" => ("badge-rejected","Отклонено"),
+              "Inactive" => ("badge-inactive","Неактивно"),
+              _ => ("badge-draft","Черновик")
+            };
+          }
+          <span class="ad-card-badge @statusCls" style="position:static;display:inline-block;margin-bottom:1rem;">@statusLbl</span>
+          @if(Model.Ad.Status == "Rejected" && Model.Ad.RejectionReason != null){
+          <div class="alert-aogiri alert-danger-aogiri"><i class="bi bi-x-circle"></i> Причина отклонения: @Model.Ad.RejectionReason</div>
+          }
+
+          <!-- Description -->
+          @if(!string.IsNullOrEmpty(Model.Ad.Description)){
+          <div class="divider"></div>
+          <div style="font-size:0.9rem;line-height:1.7;color:#ccc;">@Model.Ad.Description</div>
+          }
+
+          <!-- Owner actions -->
+          @if(Model.IsOwner){
+          <div class="divider"></div>
+          <div style="display:flex;gap:0.6rem;">
+            <a asp-page="/Ads/Edit" asp-route-id="@Model.Ad.AdID" class="btn-aogiri-outline"><i class="bi bi-pencil"></i> Редактировать</a>
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div style="width:300px;flex-shrink:0;">
+      <!-- Seller card -->
+      <div class="aogiri-card" style="margin-bottom:1rem;">
+        <div class="aogiri-card-header"><i class="bi bi-person"></i> Продавец</div>
+        <div class="aogiri-card-body" style="text-align:center;padding:1.2rem;">
+          <div class="avatar-circle" style="margin:0 auto 0.7rem;width:50px;height:50px;font-size:1.2rem;">
+            @Model.Ad.User.Name[0]
+          </div>
+          <div style="font-weight:600;">@Model.Ad.User.Name</div>
+          <div style="font-size:0.78rem;color:#666;margin-top:2px;">на Aogiri с @Model.Ad.User.RegDate.ToString("yyyy")</div>
+
+          @if(HttpContext.Session.GetInt32("UserId") != null && !Model.IsOwner){
+          <div class="divider"></div>
+          <!-- Send message -->
+          <form method="post" asp-page-handler="SendMessage">
+            <input type="hidden" name="id" value="@Model.Ad.AdID">
+            <textarea name="MessageText" class="form-control-aogiri" rows="3" placeholder="Написать продавцу..." style="margin-bottom:0.6rem;"></textarea>
+            <button type="submit" class="btn-aogiri-primary" style="width:100%;justify-content:center;">
+              <i class="bi bi-send"></i> Написать
+            </button>
+          </form>
+
+          <div class="divider"></div>
+          <!-- Favorite -->
+          <form method="post" action="/Favorites/Toggle?adId=@Model.Ad.AdID" style="margin:0;">
+            <button type="submit" class="btn-aogiri-outline" style="width:100%;justify-content:center;">
+              <i class="bi bi-heart@(Model.IsFavorited?"-fill":"")"></i>
+              @(Model.IsFavorited ? "В избранном" : "В избранное")
+            </button>
+          </form>
+          }
+        </div>
+      </div>
+
+      <!-- Location -->
+      <div class="aogiri-card">
+        <div class="aogiri-card-header"><i class="bi bi-geo-alt"></i> Местоположение</div>
+        <div class="aogiri-card-body">
+          <div style="font-size:0.9rem;color:#ccc;">
+            <div style="font-weight:600;">@Model.Ad.Location.City</div>
+            @if(!string.IsNullOrEmpty(Model.Ad.Location.Region)){<div style="color:#888;">@Model.Ad.Location.Region</div>}
+            <div style="color:#666;">@Model.Ad.Location.Country</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+}
