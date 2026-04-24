@@ -11,12 +11,16 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+// ─── НОВОЕ: фоновый сервис деактивации просроченных объявлений ───
+builder.Services.AddHostedService<AdExpiryService>();
+// ─────────────────────────────────────────────────────────────────
+
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromHours(8);
-    options.Cookie.HttpOnly = true;
+    options.IdleTimeout      = TimeSpan.FromHours(8);
+    options.Cookie.HttpOnly  = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.Name = "AogiriSession";
+    options.Cookie.Name      = "AogiriSession";
 });
 
 builder.Services.AddHttpContextAccessor();
@@ -37,7 +41,7 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
-// Apply migrations on startup
+// Применяем миграции при старте
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

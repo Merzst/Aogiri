@@ -1,0 +1,54 @@
+@page "{id:int}"
+@model Aogiri.Pages.Ads.ReportModel
+@{ ViewData["Title"] = "Пожаловаться"; Layout = "_Layout"; }
+
+<div style="max-width:500px;margin:2rem auto;padding:0 1.5rem;">
+  <div class="section-title">
+    <i class="bi bi-flag" style="color:#8B0000;"></i> Жалоба на объявление
+  </div>
+
+  @if (Model.Ad != null)
+  {
+    <div class="aogiri-card" style="margin-bottom:1rem;padding:1rem 1.2rem;">
+      <div style="font-size:0.8rem;color:#888;">Объявление:</div>
+      <div style="font-weight:600;color:#e8e8e8;margin-top:2px;">@Model.Ad.Title</div>
+      <div style="font-size:0.78rem;color:#666;margin-top:2px;">
+        Автор: @Model.Ad.User.Name
+      </div>
+    </div>
+  }
+
+  <div class="aogiri-card">
+    <div class="aogiri-card-body" style="padding:1.5rem;">
+      <form method="post">
+        <div class="form-group-aogiri">
+          <label class="form-label-aogiri">Причина жалобы <span style="color:#c0392b">*</span></label>
+          <select name="Reason" class="form-control-aogiri" required>
+            <option value="">— Выберите причину —</option>
+            <option value="Мошенничество / обман">Мошенничество / обман</option>
+            <option value="Запрещённый товар или услуга">Запрещённый товар или услуга</option>
+            <option value="Спам / дубликат объявления">Спам / дубликат объявления</option>
+            <option value="Некорректные фото или описание">Некорректные фото или описание</option>
+            <option value="Оскорбительное содержание">Оскорбительное содержание</option>
+            <option value="Другое">Другое</option>
+          </select>
+        </div>
+
+        <div style="display:flex;gap:0.8rem;justify-content:flex-end;margin-top:1rem;">
+          <a asp-page="/Ads/Detail" asp-route-id="@Model.Ad?.AdID"
+             class="btn-aogiri-outline">
+            <i class="bi bi-x"></i> Отмена
+          </a>
+          <button type="submit" class="btn-aogiri-danger">
+            <i class="bi bi-flag"></i> Отправить жалобу
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="alert-aogiri alert-info-aogiri" style="margin-top:1rem;">
+    <i class="bi bi-info-circle"></i>
+    Жалоба будет рассмотрена модератором. Злоупотребление функцией жалоб может привести к блокировке аккаунта.
+  </div>
+</div>

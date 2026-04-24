@@ -11,8 +11,6 @@
       <!-- Avatar + info -->
       <div class="aogiri-card" style="margin-bottom:1rem;">
         <div class="aogiri-card-body" style="padding:1.5rem;text-align:center;">
-
-          <!-- Avatar -->
           <div style="position:relative;display:inline-block;margin-bottom:1rem;">
             @if(!string.IsNullOrEmpty(Model.CurrentUser?.AvatarUrl)){
               <img src="@Model.CurrentUser.AvatarUrl" id="avatarPreview"
@@ -21,9 +19,9 @@
               <div class="profile-avatar-lg" id="avatarPlaceholder" style="margin:0;">
                 @Model.CurrentUser?.Name?[0]
               </div>
-              <img id="avatarPreview" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #8B0000;display:none;">
+              <img id="avatarPreview"
+                   style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #8B0000;display:none;">
             }
-            <!-- Edit overlay -->
             <label for="avatarInput" title="Изменить фото"
                    style="position:absolute;bottom:0;right:0;width:24px;height:24px;background:#8B0000;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.7rem;color:#fff;">
               <i class="bi bi-camera"></i>
@@ -62,13 +60,11 @@
         <div class="stat-box"><div class="stat-num">@Model.TotalViews</div><div class="stat-label">Просм.</div></div>
       </div>
 
-      <!-- Edit profile form (с загрузкой аватарки) -->
-      <div class="aogiri-card">
+      <!-- Edit profile form -->
+      <div class="aogiri-card" style="margin-bottom:1rem;">
         <div class="aogiri-card-header"><i class="bi bi-pencil"></i> Редактировать профиль</div>
         <div class="aogiri-card-body">
           <form method="post" asp-page-handler="UpdateProfile" enctype="multipart/form-data">
-
-            <!-- Скрытый input для аватарки — триггерится по клику на overlay выше -->
             <input type="file" id="avatarInput" asp-for="Avatar" accept="image/*"
                    style="display:none;" onchange="previewAvatar(this)">
 
@@ -85,10 +81,10 @@
               <input asp-for="Email" type="email" class="form-control-aogiri" placeholder="необязательно">
             </div>
 
-            <!-- Превью выбранной аватарки -->
             <div id="avatarPreviewBlock" style="display:none;margin-bottom:0.8rem;">
               <div style="font-size:0.75rem;color:#888;margin-bottom:0.3rem;">Новая аватарка:</div>
-              <img id="avatarNewPreview" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #8B0000;">
+              <img id="avatarNewPreview"
+                   style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #8B0000;">
             </div>
 
             <button type="submit" class="btn-aogiri-primary" style="width:100%;justify-content:center;">
@@ -97,6 +93,37 @@
           </form>
         </div>
       </div>
+
+      @* ─────────────────────────────────────────────────────── *@
+      @* НОВОЕ: Форма смены пароля                               *@
+      @* ─────────────────────────────────────────────────────── *@
+      <div class="aogiri-card">
+        <div class="aogiri-card-header"><i class="bi bi-shield-lock"></i> Сменить пароль</div>
+        <div class="aogiri-card-body">
+          <form method="post" asp-page-handler="ChangePassword">
+            <div class="form-group-aogiri">
+              <label class="form-label-aogiri">Текущий пароль</label>
+              <input asp-for="OldPassword" type="password" class="form-control-aogiri"
+                     placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <div class="form-group-aogiri">
+              <label class="form-label-aogiri">Новый пароль</label>
+              <input asp-for="NewPassword" type="password" class="form-control-aogiri"
+                     placeholder="Минимум 4 символа" autocomplete="new-password">
+            </div>
+            <div class="form-group-aogiri">
+              <label class="form-label-aogiri">Подтверждение</label>
+              <input asp-for="ConfirmPassword" type="password" class="form-control-aogiri"
+                     placeholder="Повторите новый пароль" autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn-aogiri-outline" style="width:100%;justify-content:center;">
+              <i class="bi bi-key"></i> Изменить пароль
+            </button>
+          </form>
+        </div>
+      </div>
+      @* ─────────────────────────────────────────────────────── *@
+
     </div>
 
     <!-- ===== RIGHT: Ads ===== -->
@@ -121,7 +148,11 @@
         <div class="aogiri-card">
           <table class="aogiri-table">
             <thead><tr>
-              <th>Объявление</th><th>Категория</th><th>Цена</th><th>Статус</th><th>Просм.</th><th>Действия</th>
+              <th>Объявление</th><th>Категория</th><th>Цена</th>
+              <th>Статус</th><th>Просм.</th>
+              @* НОВОЕ: колонка срока *@
+              <th>Истекает</th>
+              <th>Действия</th>
             </tr></thead>
             <tbody>
             @foreach(var ad in Model.MyAds){
@@ -151,12 +182,41 @@
                 }
               </td>
               <td style="color:#666;font-size:0.85rem;">@ad.ViewCount</td>
+
+              @* ─── НОВОЕ: срок публикации ─── *@
+              <td style="font-size:0.78rem;">
+                @if(ad.ExpiryDate.HasValue){
+                  var days = (int)(ad.ExpiryDate.Value - DateTime.UtcNow).TotalDays;
+                  var col  = days <= 3 ? "#e74c3c" : (days <= 7 ? "#e67e22" : "#666");
+                  if(days > 0){
+                    <span style="color:@col;">@days д.</span>
+                  } else {
+                    <span style="color:#e74c3c;">Истёк</span>
+                  }
+                } else {
+                  <span style="color:#444;">—</span>
+                }
+              </td>
+
               <td>
-                <div style="display:flex;gap:0.3rem;">
+                <div style="display:flex;gap:0.3rem;flex-wrap:wrap;">
                   <a asp-page="/Ads/Edit" asp-route-id="@ad.AdID"
                      class="btn-aogiri-outline btn-aogiri-sm" title="Редактировать">
                     <i class="bi bi-pencil"></i>
                   </a>
+
+                  @* ─── НОВОЕ: Продлить ─── *@
+                  @if(ad.Status == "Active" || ad.Status == "Inactive"){
+                  <form method="post" asp-page-handler="RenewAd" style="margin:0;">
+                    <input type="hidden" name="adId" value="@ad.AdID">
+                    <button type="submit" class="btn-aogiri-outline btn-aogiri-sm"
+                            title="Продлить на 30 дней"
+                            style="color:#2ecc71;border-color:#2ecc71;">
+                      <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                  </form>
+                  }
+
                   <form method="post" asp-page-handler="DeactivateAd" style="margin:0;">
                     <input type="hidden" name="adId" value="@ad.AdID">
                     <button type="submit" class="btn-aogiri-outline btn-aogiri-sm"
@@ -164,6 +224,7 @@
                       <i class="bi bi-@(ad.Status=="Active"?"pause":"play")"></i>
                     </button>
                   </form>
+
                   <form method="post" asp-page-handler="DeleteAd" style="margin:0;"
                         onsubmit="return confirm('Удалить объявление «@ad.Title»?')">
                     <input type="hidden" name="adId" value="@ad.AdID">
@@ -190,11 +251,9 @@ function previewAvatar(input) {
         const reader = new FileReader();
         reader.onload = e => {
             const src = e.target.result;
-            // Показываем превью в блоке формы
-            const np = document.getElementById('avatarNewPreview');
+            const np  = document.getElementById('avatarNewPreview');
             if (np) { np.src = src; }
             document.getElementById('avatarPreviewBlock').style.display = 'block';
-            // Также обновляем большой аватар вверху для визуального фидбека
             const prev = document.getElementById('avatarPreview');
             const phld = document.getElementById('avatarPlaceholder');
             if (prev) { prev.src = src; prev.style.display = 'block'; }

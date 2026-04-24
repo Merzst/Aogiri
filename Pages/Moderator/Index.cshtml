@@ -3,56 +3,90 @@
 @{ ViewData["Title"] = "Панель модератора"; Layout = "_Layout"; }
 
 <div style="max-width:1200px;margin:2rem auto;padding:0 1.5rem;">
-  <div class="section-title"><i class="bi bi-shield-check" style="color:#8B0000;"></i> Панель модератора</div>
+  <div class="section-title">
+    <i class="bi bi-shield-check" style="color:#8B0000;"></i> Панель модератора
+  </div>
 
   <div class="aogiri-tabs">
-    <a class="aogiri-tab @(Model.Tab=="ads"?"active":"")" href="?tab=ads"><i class="bi bi-megaphone"></i> На модерации (@Model.PendingAds.Count)</a>
-    <a class="aogiri-tab @(Model.Tab=="users"?"active":"")" href="?tab=users"><i class="bi bi-people"></i> Пользователи</a>
+    <a class="aogiri-tab @(Model.Tab=="ads"?"active":"")" href="?tab=ads">
+      <i class="bi bi-megaphone"></i> На модерации (@Model.PendingAds.Count)
+    </a>
+    <a class="aogiri-tab @(Model.Tab=="users"?"active":"")" href="?tab=users">
+      <i class="bi bi-people"></i> Пользователи
+    </a>
+    @* ─── НОВОЕ: вкладка жалоб ─── *@
+    <a class="aogiri-tab @(Model.Tab=="reports"?"active":"")" href="?tab=reports">
+      <i class="bi bi-flag"></i> Жалобы
+      @{ var newReports = Model.Reports.Count(r => !r.IsReviewed); }
+      @if(newReports > 0){
+        <span style="background:#c0392b;color:#fff;border-radius:10px;padding:0 6px;font-size:0.72rem;margin-left:4px;">@newReports</span>
+      }
+    </a>
   </div>
 
+  @* ── Очередь модерации ── *@
   @if(Model.Tab == "ads"){
-  @if(!Model.PendingAds.Any()){
-  <div class="empty-state"><i class="bi bi-check-circle"></i><p>Нет объявлений на модерации</p></div>
-  } else {
-  <div style="display:flex;flex-direction:column;gap:0.8rem;">
-    @foreach(var ad in Model.PendingAds){
-    <div class="mod-queue-item">
-      @if(!string.IsNullOrEmpty(ad.ImageUrl)){
-      <img src="@ad.ImageUrl" style="width:80px;height:60px;object-fit:cover;border-radius:6px;flex-shrink:0;">
-      } else {
-      <div style="width:80px;height:60px;background:#242424;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#444;font-size:1.5rem;"><i class="bi bi-image"></i></div>
-      }
-      <div style="flex:1;min-width:0;">
-        <div style="font-weight:600;color:#e8e8e8;">@ad.Title</div>
-        <div style="font-size:0.8rem;color:#888;margin-top:2px;">
-          <span><i class="bi bi-person"></i> @ad.User.Name</span> ·
-          <span><i class="bi bi-tag"></i> @ad.Category.Name</span> ·
-          <span><i class="bi bi-geo-alt"></i> @ad.Location.City</span> ·
-          <span style="color:#c0392b;font-weight:600;">@ad.Price.ToString("N0") руб.</span>
+    @if(!Model.PendingAds.Any()){
+    <div class="empty-state">
+      <i class="bi bi-check-circle"></i>
+      <p>Нет объявлений на модерации</p>
+    </div>
+    } else {
+    <div style="display:flex;flex-direction:column;gap:0.8rem;">
+      @foreach(var ad in Model.PendingAds){
+      <div class="mod-queue-item">
+        @if(!string.IsNullOrEmpty(ad.ImageUrl)){
+        <img src="@ad.ImageUrl" style="width:80px;height:60px;object-fit:cover;border-radius:6px;flex-shrink:0;">
+        } else {
+        <div style="width:80px;height:60px;background:#242424;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#444;font-size:1.5rem;">
+          <i class="bi bi-image"></i>
         </div>
-        @if(!string.IsNullOrEmpty(ad.Description)){
-        <div style="font-size:0.8rem;color:#666;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@ad.Description</div>
         }
-        <div style="font-size:0.75rem;color:#555;margin-top:2px;">Подано: @ad.PublishedDate.ToString("dd.MM.yyyy HH:mm")</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;color:#e8e8e8;">@ad.Title</div>
+          <div style="font-size:0.8rem;color:#888;margin-top:2px;">
+            <span><i class="bi bi-person"></i> @ad.User.Name</span> ·
+            <span><i class="bi bi-tag"></i> @ad.Category.Name</span> ·
+            <span><i class="bi bi-geo-alt"></i> @ad.Location.City</span> ·
+            <span style="color:#c0392b;font-weight:600;">@ad.Price.ToString("N0") руб.</span>
+          </div>
+          @if(!string.IsNullOrEmpty(ad.Description)){
+          <div style="font-size:0.8rem;color:#666;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            @ad.Description
+          </div>
+          }
+          <div style="font-size:0.75rem;color:#555;margin-top:2px;">
+            Подано: @ad.PublishedDate.ToString("dd.MM.yyyy HH:mm")
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.4rem;align-items:flex-end;">
+          <a asp-page="/Ads/Detail" asp-route-id="@ad.AdID"
+             class="btn-aogiri-outline btn-aogiri-sm">
+            <i class="bi bi-eye"></i> Просмотр
+          </a>
+          <form method="post" asp-page-handler="Approve" style="margin:0;">
+            <input type="hidden" name="adId" value="@ad.AdID">
+            <button type="submit" class="btn-aogiri-success btn-aogiri-sm">
+              <i class="bi bi-check2"></i> Одобрить
+            </button>
+          </form>
+          <form method="post" asp-page-handler="Reject" style="margin:0;display:flex;gap:0.3rem;">
+            <input type="hidden" name="adId" value="@ad.AdID">
+            <input type="text" name="RejectionReason" class="form-control-aogiri"
+                   style="width:150px;font-size:0.78rem;padding:0.3rem;"
+                   placeholder="Причина (необяз.)">
+            <button type="submit" class="btn-aogiri-danger btn-aogiri-sm">
+              <i class="bi bi-x"></i> Отклонить
+            </button>
+          </form>
+        </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:0.4rem;align-items:flex-end;">
-        <a asp-page="/Ads/Detail" asp-route-id="@ad.AdID" class="btn-aogiri-outline btn-aogiri-sm"><i class="bi bi-eye"></i> Просмотр</a>
-        <form method="post" asp-page-handler="Approve" style="margin:0;">
-          <input type="hidden" name="adId" value="@ad.AdID">
-          <button type="submit" class="btn-aogiri-success btn-aogiri-sm"><i class="bi bi-check2"></i> Одобрить</button>
-        </form>
-        <form method="post" asp-page-handler="Reject" style="margin:0;display:flex;gap:0.3rem;">
-          <input type="hidden" name="adId" value="@ad.AdID">
-          <input type="text" name="RejectionReason" class="form-control-aogiri" style="width:150px;font-size:0.78rem;padding:0.3rem;" placeholder="Причина (необяз.)">
-          <button type="submit" class="btn-aogiri-danger btn-aogiri-sm"><i class="bi bi-x"></i> Отклонить</button>
-        </form>
-      </div>
+      }
     </div>
     }
-  </div>
-  }
   }
 
+  @* ── Пользователи ── *@
   @if(Model.Tab == "users"){
   <div class="aogiri-card">
     <table class="aogiri-table">
@@ -65,14 +99,18 @@
         <td style="color:#888;font-size:0.85rem;">@u.Role</td>
         <td style="color:#666;font-size:0.82rem;">@u.RegDate.ToString("dd.MM.yyyy")</td>
         <td>
-          @if(u.Status=="Active"){<span class="badge-active ad-card-badge" style="position:static;display:inline-block;">Активен</span>}
-          else{<span class="badge-rejected ad-card-badge" style="position:static;display:inline-block;">Заблокирован</span>}
+          @if(u.Status=="Active"){
+            <span class="badge-active ad-card-badge" style="position:static;display:inline-block;">Активен</span>
+          } else {
+            <span class="badge-rejected ad-card-badge" style="position:static;display:inline-block;">Заблокирован</span>
+          }
         </td>
         <td>
           @if(u.Role != "Admin"){
           <form method="post" asp-page-handler="ToggleBlock" style="margin:0;">
             <input type="hidden" name="userId" value="@u.UserID">
-            <button type="submit" class="@(u.Status=="Active"?"btn-aogiri-danger":"btn-aogiri-success") btn-aogiri-sm">
+            <button type="submit"
+                    class="@(u.Status=="Active"?"btn-aogiri-danger":"btn-aogiri-success") btn-aogiri-sm">
               <i class="bi bi-@(u.Status=="Active"?"lock":"unlock")"></i>
               @(u.Status=="Active"?"Заблокировать":"Разблокировать")
             </button>
@@ -85,4 +123,78 @@
     </table>
   </div>
   }
+
+  @* ─── НОВОЕ: Жалобы ─────────────────────────────────────────── *@
+  @if(Model.Tab == "reports"){
+    @if(!Model.Reports.Any()){
+    <div class="empty-state">
+      <i class="bi bi-flag"></i>
+      <p>Жалоб нет</p>
+    </div>
+    } else {
+    <div class="aogiri-card">
+      <table class="aogiri-table">
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>От кого</th>
+            <th>Объявление</th>
+            <th>Причина</th>
+            <th>Статус</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+        @foreach(var r in Model.Reports){
+        <tr style="@(r.IsReviewed ? "opacity:0.5;" : "")">
+          <td style="font-size:0.78rem;color:#666;white-space:nowrap;">
+            @r.CreatedAt.ToString("dd.MM HH:mm")
+          </td>
+          <td style="font-size:0.85rem;">@r.User.Name</td>
+          <td>
+            <a asp-page="/Ads/Detail" asp-route-id="@r.AdID"
+               style="color:#e8e8e8;font-size:0.85rem;font-weight:500;">
+              @r.Advertisement.Title
+            </a>
+            <div style="font-size:0.72rem;color:#666;">
+              Автор: @r.Advertisement.User.Name
+            </div>
+          </td>
+          <td style="color:#c0392b;font-size:0.85rem;">@r.Reason</td>
+          <td>
+            @if(r.IsReviewed){
+              <span style="color:#2ecc71;font-size:0.78rem;"><i class="bi bi-check"></i> Рассмотрена</span>
+            } else {
+              <span style="color:#e67e22;font-size:0.78rem;"><i class="bi bi-clock"></i> Новая</span>
+            }
+          </td>
+          <td>
+            <div style="display:flex;gap:0.3rem;">
+              @if(!r.IsReviewed){
+              <form method="post" asp-page-handler="ReviewReport" style="margin:0;">
+                <input type="hidden" name="reportId" value="@r.ReportID">
+                <button type="submit" class="btn-aogiri-success btn-aogiri-sm"
+                        title="Пометить как рассмотренную">
+                  <i class="bi bi-check2"></i>
+                </button>
+              </form>
+              }
+              <form method="post" asp-page-handler="DeleteReport" style="margin:0;"
+                    onsubmit="return confirm('Удалить жалобу?')">
+                <input type="hidden" name="reportId" value="@r.ReportID">
+                <button type="submit" class="btn-aogiri-outline btn-aogiri-sm">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        }
+        </tbody>
+      </table>
+    </div>
+    }
+  }
+  @* ────────────────────────────────────────────────────────────── *@
+
 </div>

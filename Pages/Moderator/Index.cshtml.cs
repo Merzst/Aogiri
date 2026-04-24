@@ -12,7 +12,9 @@ public class IndexModel : PageModel
     public IndexModel(ApplicationDbContext db) { _db = db; }
 
     public List<Advertisement> PendingAds { get; set; } = new();
-    public List<User> Users { get; set; } = new();
+    public List<User>          Users      { get; set; } = new();
+    public List<Report>        Reports    { get; set; } = new(); // НОВОЕ
+
     public string Tab { get; set; } = "ads";
     [BindProperty] public string RejectionReason { get; set; } = string.Empty;
 
@@ -21,9 +23,21 @@ public class IndexModel : PageModel
         var role = HttpContext.Session.GetString("UserRole");
         if (role != "Moderator" && role != "Admin") return Forbid();
         Tab = tab;
-        PendingAds = await _db.Advertisements.Include(a => a.User).Include(a => a.Category).Include(a => a.Location)
-            .Where(a => a.Status == "Pending").OrderBy(a => a.PublishedDate).ToListAsync();
+
+        PendingAds = await _db.Advertisements
+            .Include(a => a.User).Include(a => a.Category).Include(a => a.Location)
+            .Where(a => a.Status == "Pending")
+            .OrderBy(a => a.PublishedDate).ToListAsync();
+
         Users = await _db.Users.OrderBy(u => u.Name).ToListAsync();
+
+        // НОВОЕ: загрузка непросмотренных жалоб
+        Reports = await _db.Reports
+            .Include(r => r.User)
+            .Include(r => r.Advertisement).ThenInclude(a => a.User)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+
         return Page();
     }
 
@@ -49,7 +63,9 @@ public class IndexModel : PageModel
         var ad = await _db.Advertisements.FindAsync(adId);
         if (ad == null) return NotFound();
         ad.Status = "Rejected";
-        ad.RejectionReason = string.IsNullOrWhiteSpace(RejectionReason) ? "Не соответствует правилам" : RejectionReason;
+        ad.RejectionReason = string.IsNullOrWhiteSpace(RejectionReason)
+            ? "Не соответствует правилам"
+            : RejectionReason;
         var modId = HttpContext.Session.GetInt32("UserId");
         _db.ActivityLogs.Add(new ActivityLog { UserID = modId, Action = "Отклонение объявления", Details = $"AdID={adId}: {ad.RejectionReason}", Timestamp = DateTime.UtcNow });
         await _db.SaveChangesAsync();
@@ -65,9 +81,39 @@ public class IndexModel : PageModel
         if (user == null) return NotFound();
         user.Status = user.Status == "Active" ? "Blocked" : "Active";
         var modId = HttpContext.Session.GetInt32("UserId");
-        _db.ActivityLogs.Add(new ActivityLog { UserID = modId, Action = $"{(user.Status == "Blocked" ? "Блокировка" : "Разблокировка")} пользователя", Details = $"User: {user.Login}", Timestamp = DateTime.UtcNow });
+        _db.ActivityLogs.Add(new ActivityLog
+        {
+            UserID = modId,
+            Action = $"{(user.Status == "Blocked" ? "Блокировка" : "Разблокировка")} пользователя",
+            Details = $"User: {user.Login}",
+            Timestamp = DateTime.UtcNow
+        });
         await _db.SaveChangesAsync();
-        TempData["Success"] = user.Status == "Blocked" ? "Пользователь заблокирован" : "Пользователь разблокирован";
+        TempData["Success"] = user.Status == "Blocked"
+            ? "Пользователь заблокирован"
+            : "Пользователь разблокирован";
         return RedirectToPage(new { tab = "users" });
+    }
+
+    // ── НОВОЕ: пометить жалобу как просмотренную ────────────────
+    public async Task<IActionResult> OnPostReviewReportAsync(int reportId)
+    {
+        var role = HttpContext.Session.GetString("UserRole");
+        if (role != "Moderator" && role != "Admin") return Forbid();
+        var report = await _db.Reports.FindAsync(reportId);
+        if (report != null) { report.IsReviewed = true; await _db.SaveChangesAsync(); }
+        TempData["Success"] = "Жалоба помечена как рассмотренная";
+        return RedirectToPage(new { tab = "reports" });
+    }
+
+    // ── НОВОЕ: удалить жалобу ────────────────────────────────────
+    public async Task<IActionResult> OnPostDeleteReportAsync(int reportId)
+    {
+        var role = HttpContext.Session.GetString("UserRole");
+        if (role != "Moderator" && role != "Admin") return Forbid();
+        var report = await _db.Reports.FindAsync(reportId);
+        if (report != null) { _db.Reports.Remove(report); await _db.SaveChangesAsync(); }
+        TempData["Success"] = "Жалоба удалена";
+        return RedirectToPage(new { tab = "reports" });
     }
 }
