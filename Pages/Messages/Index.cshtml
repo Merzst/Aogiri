@@ -6,41 +6,64 @@
   <div class="section-title"><i class="bi bi-chat" style="color:#8B0000;"></i> Сообщения</div>
   <div style="display:flex;gap:1rem;height:calc(100vh - 200px);min-height:500px;">
 
-    <!-- Conversations list -->
+    <!-- Список диалогов -->
     <div class="aogiri-card" style="width:280px;flex-shrink:0;display:flex;flex-direction:column;">
       <div class="aogiri-card-header"><i class="bi bi-people"></i> Диалоги</div>
       <div style="overflow-y:auto;flex:1;">
         @if(!Model.Conversations.Any()){
-        <div class="empty-state" style="padding:2rem 1rem;"><i class="bi bi-chat-dots"></i><p style="font-size:0.85rem;">Нет диалогов</p></div>
+        <div class="empty-state" style="padding:2rem 1rem;">
+          <i class="bi bi-chat-dots"></i><p style="font-size:0.85rem;">Нет диалогов</p>
+        </div>
         }
         @foreach(var conv in Model.Conversations){
         <a class="conversation-list-item @(Model.PartnerID == conv.Partner.UserID ? "active" : "")"
            href="/Messages?partnerId=@conv.Partner.UserID">
-          <div class="avatar-circle" style="width:38px;height:38px;font-size:0.9rem;">@conv.Partner.Name[0]</div>
+          <div class="avatar-circle" style="width:38px;height:38px;font-size:0.9rem;">
+            @conv.Partner.Name[0]
+          </div>
           <div style="flex:1;min-width:0;">
             <div style="font-size:0.87rem;font-weight:600;color:#e8e8e8;">@conv.Partner.Name</div>
-            <div style="font-size:0.78rem;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@conv.LastMessage.Text</div>
+            <div style="font-size:0.78rem;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              @conv.LastMessage.Text
+            </div>
           </div>
-          @if(conv.UnreadCount > 0){<span class="unread-badge">@conv.UnreadCount</span>}
+          @if(conv.UnreadCount > 0){
+            <span class="unread-badge">@conv.UnreadCount</span>
+          }
         </a>
         }
       </div>
     </div>
 
-    <!-- Chat area -->
+    <!-- Область чата -->
     <div class="aogiri-card" style="flex:1;display:flex;flex-direction:column;min-width:0;">
       @if(Model.CurrentPartner != null){
-      <div class="aogiri-card-header">
-        <div class="avatar-circle" style="width:30px;height:30px;font-size:0.8rem;">@Model.CurrentPartner.Name[0]</div>
-        @Model.CurrentPartner.Name
+      <div class="aogiri-card-header" style="justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <div class="avatar-circle" style="width:30px;height:30px;font-size:0.8rem;">
+            @Model.CurrentPartner.Name[0]
+          </div>
+          @Model.CurrentPartner.Name
+        </div>
+        <!-- Индикатор онлайн-соединения -->
+        <div id="connStatus"
+             style="font-size:0.72rem;color:#555;display:flex;align-items:center;gap:4px;">
+          <span id="connDot"
+                style="width:8px;height:8px;border-radius:50%;background:#555;display:inline-block;"></span>
+          <span id="connText">подключение...</span>
+        </div>
       </div>
-      <div class="chat-container">
+
+      <!-- Сообщения -->
+      <div class="chat-container" id="chatContainer">
         @{var myId = HttpContext.Session.GetInt32("UserId");}
         @foreach(var msg in Model.CurrentMessages){
         <div>
           <div class="msg-bubble @(msg.SenderID == myId ? "msg-bubble-sent" : "msg-bubble-recv")">
             @if(msg.Advertisement != null){
-            <div style="font-size:0.72rem;opacity:0.7;margin-bottom:3px;"><i class="bi bi-megaphone"></i> По объявлению: @msg.Advertisement.Title</div>
+            <div style="font-size:0.72rem;opacity:0.7;margin-bottom:3px;">
+              <i class="bi bi-megaphone"></i> По объявлению: @msg.Advertisement.Title
+            </div>
             }
             @msg.Text
             <span class="msg-time">@msg.SentDate.ToString("HH:mm · dd.MM")</span>
@@ -48,14 +71,19 @@
         </div>
         }
       </div>
-      <div style="padding:0.75rem;border-top:1px solid #3a3a3a;">
-        <form method="post" asp-page-handler="Reply" asp-route-partnerId="@Model.PartnerID" style="display:flex;gap:0.5rem;">
-          <input name="ReplyText" class="form-control-aogiri" style="flex:1;" placeholder="Написать сообщение...">
-          <button type="submit" class="btn-aogiri-primary"><i class="bi bi-send"></i></button>
-        </form>
+
+      <!-- Форма отправки — теперь через SignalR, без перезагрузки страницы -->
+      <div style="padding:0.75rem;border-top:1px solid #3a3a3a;display:flex;gap:0.5rem;">
+        <input id="msgInput" class="form-control-aogiri" style="flex:1;"
+               placeholder="Написать сообщение..."
+               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}">
+        <button onclick="sendMsg()" class="btn-aogiri-primary" id="sendBtn">
+          <i class="bi bi-send"></i>
+        </button>
       </div>
       } else {
-      <div class="empty-state" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+      <div class="empty-state" style="flex:1;display:flex;flex-direction:column;
+                                       align-items:center;justify-content:center;">
         <i class="bi bi-chat" style="font-size:2.5rem;color:#333;"></i>
         <p style="color:#555;margin-top:0.8rem;">Выберите диалог для просмотра</p>
       </div>
@@ -64,8 +92,111 @@
   </div>
 </div>
 
+@section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"
+        crossorigin="anonymous"></script>
 <script>
-// Auto-scroll to bottom of chat
-const chat = document.querySelector('.chat-container');
-if(chat) chat.scrollTop = chat.scrollHeight;
+// ── Данные текущего пользователя (из сессии, вставляем через Razor) ──
+const MY_ID       = @(HttpContext.Session.GetInt32("UserId") ?? 0);
+const PARTNER_ID  = @(Model.PartnerID ?? 0);
+
+const chatContainer = document.getElementById('chatContainer');
+const msgInput      = document.getElementById('msgInput');
+
+// ── Скролл вниз при загрузке ─────────────────────────────────
+if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+
+// ── Инициализация SignalR ─────────────────────────────────────
+let connection = null;
+
+if (MY_ID > 0) {
+    connection = new signalR.HubConnectionBuilder()
+        .withUrl('/chatHub')
+        .withAutomaticReconnect([0, 2000, 5000, 10000])
+        .configureLogging(signalR.LogLevel.Warning)
+        .build();
+
+    // Получено новое сообщение
+    connection.on('ReceiveMessage', (payload) => {
+        // Показываем только если это диалог с текущим партнёром
+        if ((payload.senderId === PARTNER_ID && payload.receiverId === MY_ID) ||
+            (payload.senderId === MY_ID      && payload.receiverId === PARTNER_ID)) {
+            appendMessage(payload);
+        }
+    });
+
+    connection.onreconnecting(() => setStatus('переподключение...', '#e67e22'));
+    connection.onreconnected(() => {
+        setStatus('онлайн', '#2ecc71');
+        connection.invoke('Register', MY_ID);
+    });
+    connection.onclose(() => setStatus('нет соединения', '#e74c3c'));
+
+    connection.start()
+        .then(() => {
+            connection.invoke('Register', MY_ID);
+            setStatus('онлайн', '#2ecc71');
+        })
+        .catch(() => setStatus('нет соединения', '#e74c3c'));
+}
+
+// ── Отправить сообщение ───────────────────────────────────────
+function sendMsg() {
+    const text = msgInput?.value.trim();
+    if (!text || PARTNER_ID === 0) return;
+
+    if (connection && connection.state === signalR.HubConnectionState.Connected) {
+        connection.invoke('SendMessage', MY_ID, PARTNER_ID, text)
+            .catch(err => console.error('SignalR send error:', err));
+        msgInput.value = '';
+    } else {
+        // Fallback: обычная POST-форма если SignalR не подключён
+        fallbackSend(text);
+    }
+}
+
+// ── Отрисовать пузырь ────────────────────────────────────────
+function appendMessage(payload) {
+    if (!chatContainer) return;
+    const isMine = payload.senderId === MY_ID;
+    const wrap   = document.createElement('div');
+    wrap.innerHTML = `
+      <div class="msg-bubble ${isMine ? 'msg-bubble-sent' : 'msg-bubble-recv'}">
+        ${escHtml(payload.text)}
+        <span class="msg-time">${payload.sentDate}</span>
+      </div>`;
+    chatContainer.appendChild(wrap);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setStatus(text, color) {
+    const dot  = document.getElementById('connDot');
+    const span = document.getElementById('connText');
+    if (dot)  dot.style.background  = color;
+    if (span) span.textContent       = text;
+}
+
+// Fallback через обычную форму
+function fallbackSend(text) {
+    const form   = document.createElement('form');
+    form.method  = 'post';
+    form.action  = `/Messages?handler=Reply&partnerId=${PARTNER_ID}`;
+
+    const token  = document.querySelector('input[name="__RequestVerificationToken"]');
+    if (token) form.appendChild(token.cloneNode());
+
+    const inp       = document.createElement('input');
+    inp.type        = 'hidden';
+    inp.name        = 'ReplyText';
+    inp.value       = text;
+    form.appendChild(inp);
+
+    document.body.appendChild(form);
+    form.submit();
+}
 </script>
+}

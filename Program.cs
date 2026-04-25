@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Aogiri.Data;
+using Aogiri.Hubs;
 using Aogiri.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,17 +11,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IAuthService, AuthService>();
-
-// ─── НОВОЕ: фоновый сервис деактивации просроченных объявлений ───
 builder.Services.AddHostedService<AdExpiryService>();
-// ─────────────────────────────────────────────────────────────────
+
+// ── SignalR ──────────────────────────────────────────────────
+builder.Services.AddSignalR();
 
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout      = TimeSpan.FromHours(8);
-    options.Cookie.HttpOnly  = true;
+    options.IdleTimeout        = TimeSpan.FromHours(8);
+    options.Cookie.HttpOnly    = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.Name      = "AogiriSession";
+    options.Cookie.Name        = "AogiriSession";
 });
 
 builder.Services.AddHttpContextAccessor();
@@ -41,7 +42,9 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
-// Применяем миграции при старте
+// ── Маршрут хаба ────────────────────────────────────────────
+app.MapHub<ChatHub>("/chatHub");
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

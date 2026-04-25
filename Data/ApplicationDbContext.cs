@@ -7,18 +7,16 @@ public class ApplicationDbContext : DbContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
-    public DbSet<User> Users { get; set; }
-    public DbSet<Advertisement> Advertisements { get; set; }
-    public DbSet<Category> Categories { get; set; }
-    public DbSet<Location> Locations { get; set; }
-    public DbSet<Message> Messages { get; set; }
-    public DbSet<Favorite> Favorites { get; set; }
-    public DbSet<ActivityLog> ActivityLogs { get; set; }
+    public DbSet<User>           Users           { get; set; }
+    public DbSet<Advertisement>  Advertisements  { get; set; }
+    public DbSet<Category>       Categories      { get; set; }
+    public DbSet<Location>       Locations       { get; set; }
+    public DbSet<Message>        Messages        { get; set; }
+    public DbSet<Favorite>       Favorites       { get; set; }
+    public DbSet<ActivityLog>    ActivityLogs    { get; set; }
     public DbSet<ModerationRule> ModerationRules { get; set; }
-
-    // ─── НОВОЕ ───────────────────────────────────────────────
-    public DbSet<Report> Reports { get; set; }
-    // ─────────────────────────────────────────────────────────
+    public DbSet<Report>         Reports         { get; set; }
+    public DbSet<AdImage>        AdImages        { get; set; }  // НОВОЕ
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,17 +31,8 @@ public class ApplicationDbContext : DbContext
             e.Property(u => u.RegDate).HasDefaultValueSql("GETDATE()");
         });
 
-        modelBuilder.Entity<Category>(e =>
-        {
-            e.ToTable("Category_2");
-            e.HasKey(c => c.CategoryID);
-        });
-
-        modelBuilder.Entity<Location>(e =>
-        {
-            e.ToTable("Location_3");
-            e.HasKey(l => l.LocationID);
-        });
+        modelBuilder.Entity<Category>(e => { e.ToTable("Category_2"); e.HasKey(c => c.CategoryID); });
+        modelBuilder.Entity<Location>(e => { e.ToTable("Location_3"); e.HasKey(l => l.LocationID); });
 
         modelBuilder.Entity<Advertisement>(e =>
         {
@@ -84,28 +73,27 @@ public class ApplicationDbContext : DbContext
             e.HasOne(l => l.User).WithMany(u => u.ActivityLogs).HasForeignKey(l => l.UserID).OnDelete(DeleteBehavior.SetNull);
         });
 
-        modelBuilder.Entity<ModerationRule>(e =>
-        {
-            e.ToTable("ModerationRule_8");
-            e.HasKey(r => r.RuleID);
-        });
+        modelBuilder.Entity<ModerationRule>(e => { e.ToTable("ModerationRule_8"); e.HasKey(r => r.RuleID); });
 
-        // ─── НОВОЕ: жалобы ───────────────────────────────────
         modelBuilder.Entity<Report>(e =>
         {
             e.ToTable("Report_9");
             e.HasKey(r => r.ReportID);
             e.Property(r => r.CreatedAt).HasDefaultValueSql("GETDATE()");
-            e.HasOne(r => r.User)
-                .WithMany()
-                .HasForeignKey(r => r.UserID)
-                .OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(r => r.Advertisement)
-                .WithMany()
-                .HasForeignKey(r => r.AdID)
+            e.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserID).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(r => r.Advertisement).WithMany().HasForeignKey(r => r.AdID).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── НОВОЕ: галерея фото ──────────────────────────────────
+        modelBuilder.Entity<AdImage>(e =>
+        {
+            e.ToTable("AdImage_10");
+            e.HasKey(i => i.AdImageID);
+            e.HasOne(i => i.Advertisement)
+                .WithMany(a => a.Images)
+                .HasForeignKey(i => i.AdID)
                 .OnDelete(DeleteBehavior.Cascade);
         });
-        // ─────────────────────────────────────────────────────
 
         SeedData(modelBuilder);
     }

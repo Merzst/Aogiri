@@ -1,0 +1,352 @@
+﻿/* ============================================================
+   aogiri-responsive.css
+   Адаптивность для мобильных и планшетов
+   Подключается ПОСЛЕ aogiri.css
+   ============================================================ */
+
+/* ── Базовые правила ───────────────────────────────────────── */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* ── Hamburger-кнопка (показываем только на мобиле) ────────── */
+.nav-hamburger {
+    display: none;
+    background: none;
+    border: 1px solid #3a3a3a;
+    color: #ccc;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+/* ── Мобильное меню — базовое состояние ────────────────────── */
+.nav-mobile-menu {
+    display: none;
+    flex-direction: column;
+    gap: 0;
+    background: #141414;
+    border-top: 1px solid #2a2a2a;
+    padding: 0.5rem 1rem 1rem;
+}
+
+    .nav-mobile-menu.open {
+        display: flex;
+    }
+
+    .nav-mobile-menu .nav-link-aogiri {
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #1e1e1e;
+        font-size: 0.95rem;
+    }
+
+        .nav-mobile-menu .nav-link-aogiri:last-child {
+            border-bottom: none;
+        }
+
+    /* Кнопки «Подать» и «Выйти» в мобильном меню */
+    .nav-mobile-menu .btn-aogiri-outline,
+    .nav-mobile-menu .btn-aogiri-primary,
+    .nav-mobile-menu .btn-publish-nav {
+        width: 100%;
+        justify-content: center;
+        margin-top: 0.4rem;
+    }
+
+/* ============================================================
+   ПЛАНШЕТ  768 – 1023 px
+   ============================================================ */
+@media (max-width: 1023px) {
+
+    /* Сетка объявлений — 2 колонки */
+    .ads-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Фильтр-сайдбар на планшете чуть уже */
+    .filter-sidebar {
+        width: 200px !important;
+    }
+
+    /* Панель админа: 2 колонки статистики */
+    div[style*="grid-template-columns:repeat(4,1fr)"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+/* ============================================================
+   МОБИЛЬ  < 768 px
+   ============================================================ */
+@media (max-width: 767px) {
+
+    /* ── Навбар ─────────────────────────────────────────────── */
+    .navbar-aogiri > div {
+        flex-wrap: nowrap !important;
+        justify-content: space-between;
+    }
+
+        /* Скрываем десктопное меню */
+        .navbar-aogiri > div > div:first-of-type,
+        .navbar-aogiri > div > div:last-of-type {
+            display: none !important;
+        }
+
+    .nav-hamburger {
+        display: flex !important;
+        align-items: center;
+    }
+
+    /* ── Hero ───────────────────────────────────────────────── */
+    .hero-section {
+        padding: 1.5rem 0 !important;
+    }
+
+    .hero-title {
+        font-size: 1.4rem !important;
+        line-height: 1.3 !important;
+    }
+
+    .hero-subtitle {
+        font-size: 0.85rem !important;
+    }
+
+    /* Поисковая строка — вертикально */
+    .search-bar-container {
+        flex-direction: column !important;
+        border-radius: 10px !important;
+        padding: 0.6rem !important;
+        gap: 0.5rem !important;
+    }
+
+    .search-divider {
+        display: none !important;
+    }
+
+    .search-input, .search-select {
+        width: 100% !important;
+        border-bottom: 1px solid #2a2a2a !important;
+        padding-bottom: 0.5rem !important;
+    }
+
+    .btn-search {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* ── Категории — горизонтальный скролл ─────────────────── */
+    .categories-section > div > div {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 6px;
+        gap: 0.4rem !important;
+    }
+
+    .category-pill {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    /* ── Основная раскладка: сайдбар + список ──────────────── */
+    /* Скрываем фильтр-сайдбар, показываем кнопку */
+    .filter-sidebar {
+        width: 100% !important;
+        display: none; /* скрыт по умолчанию */
+    }
+
+        .filter-sidebar.mobile-open {
+            display: block !important;
+        }
+
+    /* Кнопка «Фильтры» — только мобиль */
+    .mobile-filter-btn {
+        display: flex !important;
+        align-items: center;
+        gap: 0.4rem;
+        margin-bottom: 0.8rem;
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Флекс-контейнер: сайдбар + контент — вертикально */
+    div[style*="display:flex;gap:1.5rem;align-items:flex-start"] {
+        flex-direction: column !important;
+    }
+
+    /* ── Сетка объявлений — 1 колонка ──────────────────────── */
+    .ads-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ── Карточка объявления ────────────────────────────────── */
+    .ad-card-body {
+        padding: 0.7rem !important;
+    }
+
+    .ad-card-price {
+        font-size: 1rem !important;
+    }
+
+    /* ── Страница объявления (Detail) ───────────────────────── */
+    /* Сайдбар уходит вниз — уже сделано через flex-direction:column выше */
+    /* Сайдбар на моб — полная ширина */
+    div[style*="width:300px;flex-shrink:0"] {
+        width: 100% !important;
+    }
+
+    /* ── Личный кабинет ─────────────────────────────────────── */
+    div[style*="width:280px;flex-shrink:0"] {
+        width: 100% !important;
+    }
+
+    /* Таблица объявлений — горизонтальный скролл */
+    .aogiri-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+
+    /* ── Сообщения ──────────────────────────────────────────── */
+    /* Список диалогов — полная ширина, скрывается когда открыт чат */
+    div[style*="width:280px;flex-shrink:0;display:flex;flex-direction:column"] {
+        width: 100% !important;
+    }
+
+    .chat-mobile-back {
+        display: flex !important;
+    }
+
+    /* Контейнер сообщений — вертикально, полная высота экрана */
+    #messagesLayout {
+        flex-direction: column !important;
+        height: calc(100vh - 130px) !important;
+    }
+
+    #convPanel {
+        min-height: 0;
+        max-height: 100%;
+    }
+
+    #chatPanel {
+        min-height: 0;
+        flex: 1;
+    }
+
+    /* ── Модератор / Админ ──────────────────────────────────── */
+    .aogiri-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap !important;
+    }
+
+    .aogiri-tab {
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    /* Статистика — 2 колонки */
+    div[style*="grid-template-columns:repeat(4,1fr)"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    div[style*="grid-template-columns:repeat(3,1fr)"] {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+
+    /* Очередь модерации — вертикально */
+    .mod-queue-item {
+        flex-wrap: wrap !important;
+    }
+
+        .mod-queue-item > div:last-child {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            width: 100% !important;
+        }
+
+    /* ── Общие формы ────────────────────────────────────────── */
+    div[style*="grid-template-columns:1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Кнопки рядом — не ломаем */
+    div[style*="display:flex;gap:0.8rem;justify-content:flex-end"] {
+        flex-wrap: wrap !important;
+    }
+
+        div[style*="display:flex;gap:0.8rem;justify-content:flex-end"] a,
+        div[style*="display:flex;gap:0.8rem;justify-content:flex-end"] button {
+            flex: 1 1 auto !important;
+            justify-content: center !important;
+        }
+
+    /* Диапазон цен */
+    .price-range-inputs {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    /* Пагинация */
+    .pagination-aogiri {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    /* Footer */
+    .footer-aogiri > div > div:first-child {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        text-align: center;
+    }
+
+    /* Профиль — статистика */
+    div[style*="grid-template-columns:1fr 1fr 1fr"] {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+
+    /* section-title */
+    .section-title {
+        font-size: 1.1rem !important;
+    }
+
+    /* Избранное */
+    .fav-btn {
+        width: 32px !important;
+        height: 32px !important;
+    }
+
+    /* Toast уведомления */
+    #toast-container {
+        left: 1rem !important;
+        right: 1rem !important;
+        top: 10px !important;
+    }
+}
+
+/* ── Кнопка «Фильтры» скрыта на десктопе ───────────────────── */
+.mobile-filter-btn {
+    display: none;
+}
+
+/* ── Кнопка «Назад» в чате скрыта на десктопе ─────────────── */
+.chat-mobile-back {
+    display: none;
+}
+
+/* ── Плавный переход сайдбара ───────────────────────────────── */
+.filter-sidebar {
+    transition: none;
+}

@@ -3,7 +3,9 @@
 @{ ViewData["Title"] = Model.Ad?.Title ?? "Объявление"; Layout = "_Layout"; }
 
 @if(Model.Ad == null){
-<div class="empty-state" style="padding:5rem;"><i class="bi bi-exclamation-circle"></i><p>Объявление не найдено</p></div>
+<div class="empty-state" style="padding:5rem;">
+  <i class="bi bi-exclamation-circle"></i><p>Объявление не найдено</p>
+</div>
 } else {
 <div style="max-width:1100px;margin:2rem auto;padding:0 1.5rem;">
   <div style="display:flex;gap:1.5rem;align-items:flex-start;flex-wrap:wrap;">
@@ -12,13 +14,73 @@
     <div style="flex:1;min-width:0;">
       <div class="aogiri-card">
         <div class="aogiri-card-body" style="padding:1.5rem;">
-          <!-- Image -->
-          <div class="ad-detail-img" style="margin-bottom:1.2rem;">
-            @if(!string.IsNullOrEmpty(Model.Ad.ImageUrl)){
-            <img src="@Model.Ad.ImageUrl" alt="@Model.Ad.Title"
-                 style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
-            } else {<i class="bi bi-image"></i>}
+
+          @* ═══════════════════════════════════════════════════
+             ГАЛЕРЕЯ — вписывается в экран без прокрутки
+             ═══════════════════════════════════════════════════ *@
+          @{
+            var imgs = Model.Images;
+            bool hasImgs = imgs.Any();
+          }
+
+          @if(hasImgs){
+          <div style="margin-bottom:1.2rem;">
+            <!-- Главное фото -->
+            <div style="position:relative;background:#111;border-radius:8px;overflow:hidden;
+                        max-height:55vh;display:flex;align-items:center;justify-content:center;">
+              <img id="mainPhoto" src="@imgs[0].ImageUrl" alt="@Model.Ad.Title"
+                   style="max-width:100%;max-height:55vh;object-fit:contain;display:block;">
+
+              @if(imgs.Count > 1){
+              <!-- Стрелки -->
+              <button onclick="changePhoto(-1)"
+                      style="position:absolute;left:8px;top:50%;transform:translateY(-50%);
+                             background:rgba(0,0,0,.6);border:none;color:#fff;
+                             width:36px;height:36px;border-radius:50%;cursor:pointer;
+                             font-size:1rem;display:flex;align-items:center;justify-content:center;">
+                <i class="bi bi-chevron-left"></i>
+              </button>
+              <button onclick="changePhoto(1)"
+                      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);
+                             background:rgba(0,0,0,.6);border:none;color:#fff;
+                             width:36px;height:36px;border-radius:50%;cursor:pointer;
+                             font-size:1rem;display:flex;align-items:center;justify-content:center;">
+                <i class="bi bi-chevron-right"></i>
+              </button>
+
+              <!-- Счётчик -->
+              <div id="photoCounter"
+                   style="position:absolute;bottom:8px;right:10px;
+                          background:rgba(0,0,0,.6);color:#fff;
+                          border-radius:12px;padding:2px 10px;font-size:0.78rem;">
+                1 / @imgs.Count
+              </div>
+              }
+            </div>
+
+            @if(imgs.Count > 1){
+            <!-- Миниатюры -->
+            <div style="display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:4px;">
+              @for(int i = 0; i < imgs.Count; i++){
+              <img src="@imgs[i].ImageUrl"
+                   onclick="selectPhoto(@i)"
+                   id="thumb_@i"
+                   style="width:64px;height:64px;object-fit:cover;border-radius:6px;cursor:pointer;
+                          flex-shrink:0;border:2px solid @(i==0?"#8B0000":"#333");
+                          transition:border-color .15s;">
+              }
+            </div>
+            }
           </div>
+          } else {
+          <!-- Нет фото -->
+          <div style="height:200px;background:#1a1a1a;border-radius:8px;
+                      display:flex;align-items:center;justify-content:center;
+                      color:#444;font-size:2.5rem;margin-bottom:1.2rem;">
+            <i class="bi bi-image"></i>
+          </div>
+          }
+          @* ═══════════════════════════════════════════════════ *@
 
           <!-- Title & Price -->
           <div class="ad-detail-price">@Model.Ad.Price.ToString("N0") руб.</div>
@@ -30,15 +92,12 @@
             <span class="info-pill"><i class="bi bi-geo-alt"></i> @Model.Ad.Location.City</span>
             <span class="info-pill"><i class="bi bi-clock"></i> @Model.Ad.PublishedDate.ToString("dd.MM.yyyy")</span>
             <span class="info-pill"><i class="bi bi-eye"></i> @Model.Ad.ViewCount просмотров</span>
-
-            @* ─── НОВОЕ: срок публикации ─── *@
             @if(Model.Ad.ExpiryDate.HasValue){
-              var daysLeft = (int)(Model.Ad.ExpiryDate.Value - DateTime.UtcNow).TotalDays;
-              var expiryColor = daysLeft <= 3 ? "#e74c3c" : (daysLeft <= 7 ? "#e67e22" : "#888");
-              <span class="info-pill" style="color:@expiryColor;">
+              var dLeft = (int)(Model.Ad.ExpiryDate.Value - DateTime.UtcNow).TotalDays;
+              var dCol  = dLeft <= 3 ? "#e74c3c" : (dLeft <= 7 ? "#e67e22" : "#888");
+              <span class="info-pill" style="color:@dCol;">
                 <i class="bi bi-calendar-x"></i>
-                @if(daysLeft > 0){<text>Истекает через @daysLeft д.</text>}
-                else{<text>Истёк</text>}
+                @(dLeft > 0 ? $"Истекает через {dLeft} д." : "Истёк")
               </span>
             }
           </div>
@@ -70,12 +129,9 @@
           <!-- Owner actions -->
           @if(Model.IsOwner){
           <div class="divider"></div>
-          <div style="display:flex;gap:0.6rem;">
-            <a asp-page="/Ads/Edit" asp-route-id="@Model.Ad.AdID"
-               class="btn-aogiri-outline">
-              <i class="bi bi-pencil"></i> Редактировать
-            </a>
-          </div>
+          <a asp-page="/Ads/Edit" asp-route-id="@Model.Ad.AdID" class="btn-aogiri-outline">
+            <i class="bi bi-pencil"></i> Редактировать
+          </a>
           }
         </div>
       </div>
@@ -83,7 +139,6 @@
 
     <!-- Sidebar -->
     <div style="width:300px;flex-shrink:0;">
-      <!-- Seller card -->
       <div class="aogiri-card" style="margin-bottom:1rem;">
         <div class="aogiri-card-header"><i class="bi bi-person"></i> Продавец</div>
         <div class="aogiri-card-body" style="text-align:center;padding:1.2rem;">
@@ -98,22 +153,16 @@
 
           @if(HttpContext.Session.GetInt32("UserId") != null && !Model.IsOwner){
           <div class="divider"></div>
-
-          <!-- Send message -->
           <form method="post" asp-page-handler="SendMessage">
             <input type="hidden" name="id" value="@Model.Ad.AdID">
             <textarea name="MessageText" class="form-control-aogiri" rows="3"
-                      placeholder="Написать продавцу..."
-                      style="margin-bottom:0.6rem;"></textarea>
+                      placeholder="Написать продавцу..." style="margin-bottom:0.6rem;"></textarea>
             <button type="submit" class="btn-aogiri-primary"
                     style="width:100%;justify-content:center;">
               <i class="bi bi-send"></i> Написать
             </button>
           </form>
-
           <div class="divider"></div>
-
-          <!-- Favorite -->
           <form method="post" action="/Favorites/Toggle?adId=@Model.Ad.AdID"
                 style="margin:0 0 0.5rem;">
             <button type="submit" class="btn-aogiri-outline"
@@ -122,18 +171,16 @@
               @(Model.IsFavorited ? "В избранном" : "В избранное")
             </button>
           </form>
-
-          @* ─── НОВОЕ: кнопка «Пожаловаться» ─── *@
           <a asp-page="/Ads/Report" asp-route-id="@Model.Ad.AdID"
              class="btn-aogiri-outline"
-             style="width:100%;justify-content:center;display:flex;color:#888;border-color:#444;font-size:0.82rem;">
+             style="width:100%;justify-content:center;display:flex;
+                    color:#888;border-color:#444;font-size:0.82rem;">
             <i class="bi bi-flag"></i>&nbsp; Пожаловаться
           </a>
           }
         </div>
       </div>
 
-      <!-- Location -->
       <div class="aogiri-card">
         <div class="aogiri-card-header"><i class="bi bi-geo-alt"></i> Местоположение</div>
         <div class="aogiri-card-body">
@@ -149,4 +196,31 @@
 
   </div>
 </div>
+
+@section Scripts {
+<script>
+// ── Галерея ──────────────────────────────────────────────────
+const photos  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Images.Select(i => i.ImageUrl)));
+let   current = 0;
+
+function selectPhoto(idx) {
+    current = idx;
+    document.getElementById('mainPhoto').src = photos[idx];
+    document.getElementById('photoCounter').textContent = `${idx+1} / ${photos.length}`;
+    document.querySelectorAll('[id^="thumb_"]').forEach((t, i) => {
+        t.style.borderColor = i === idx ? '#8B0000' : '#333';
+    });
+}
+
+function changePhoto(dir) {
+    selectPhoto((current + dir + photos.length) % photos.length);
+}
+
+// Стрелки с клавиатуры
+document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft')  changePhoto(-1);
+    if (e.key === 'ArrowRight') changePhoto(1);
+});
+</script>
+}
 }

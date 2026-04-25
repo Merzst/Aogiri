@@ -3,12 +3,16 @@
 @{ ViewData["Title"] = "Подать объявление"; Layout = "_Layout"; }
 
 <div style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
-  <div class="section-title"><i class="bi bi-megaphone" style="color:#8B0000;"></i> Подать объявление</div>
+  <div class="section-title">
+    <i class="bi bi-megaphone" style="color:#8B0000;"></i> Подать объявление
+  </div>
 
   <div class="aogiri-card">
     <div class="aogiri-card-body" style="padding:1.5rem;">
-      @foreach(var err in ModelState.Values.SelectMany(v=>v.Errors)){
-      <div class="alert-aogiri alert-danger-aogiri"><i class="bi bi-exclamation-circle"></i> @err.ErrorMessage</div>
+      @foreach(var err in ModelState.Values.SelectMany(v => v.Errors)){
+        <div class="alert-aogiri alert-danger-aogiri">
+          <i class="bi bi-exclamation-circle"></i> @err.ErrorMessage
+        </div>
       }
       <form method="post" enctype="multipart/form-data">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
@@ -18,7 +22,8 @@
           </div>
           <div class="form-group-aogiri" style="grid-column:1/-1;">
             <label class="form-label-aogiri">Описание</label>
-            <textarea asp-for="Description" class="form-control-aogiri" rows="5" placeholder="Подробно опишите ваш товар или услугу..."></textarea>
+            <textarea asp-for="Description" class="form-control-aogiri" rows="5"
+                      placeholder="Подробно опишите ваш товар или услугу..."></textarea>
           </div>
           <div class="form-group-aogiri">
             <label class="form-label-aogiri">Цена (руб.) <span style="color:#c0392b">*</span></label>
@@ -29,7 +34,7 @@
             <select asp-for="CategoryID" class="form-control-aogiri">
               <option value="">— Выберите категорию —</option>
               @foreach(var cat in Model.Categories){
-              <option value="@cat.CategoryID">@cat.Name</option>
+                <option value="@cat.CategoryID">@cat.Name</option>
               }
             </select>
           </div>
@@ -38,26 +43,65 @@
             <select asp-for="LocationID" class="form-control-aogiri">
               <option value="">— Выберите город —</option>
               @foreach(var loc in Model.Locations){
-              <option value="@loc.LocationID">@loc.City</option>
+                <option value="@loc.LocationID">@loc.City</option>
               }
             </select>
           </div>
-          <div class="form-group-aogiri">
-            <label class="form-label-aogiri">Фотография</label>
-            <input asp-for="Image" type="file" accept="image/*" class="form-control-aogiri" style="padding:0.4rem;">
-            <div style="font-size:0.75rem;color:#555;margin-top:4px;">JPG, PNG, WEBP до 5МБ</div>
+
+          @* ── ИЗМЕНЕНО: загрузка нескольких фото ── *@
+          <div class="form-group-aogiri" style="grid-column:1/-1;">
+            <label class="form-label-aogiri">Фотографии (до 10 шт.)</label>
+            <input name="Images" type="file" accept="image/*" multiple
+                   class="form-control-aogiri" style="padding:0.4rem;"
+                   onchange="previewImages(this)">
+            <div style="font-size:0.75rem;color:#555;margin-top:4px;">
+              JPG, PNG, WEBP · первое фото будет обложкой
+            </div>
+            <!-- превью выбранных файлов -->
+            <div id="imgPreviewRow"
+                 style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.6rem;"></div>
           </div>
         </div>
+
         <div class="divider"></div>
         <div style="display:flex;gap:0.8rem;justify-content:flex-end;">
-          <a asp-page="/Account/Cabinet" class="btn-aogiri-outline"><i class="bi bi-x"></i> Отмена</a>
-          <button type="submit" class="btn-aogiri-primary"><i class="bi bi-send"></i> Опубликовать</button>
+          <a asp-page="/Account/Cabinet" class="btn-aogiri-outline">
+            <i class="bi bi-x"></i> Отмена
+          </a>
+          <button type="submit" class="btn-aogiri-primary">
+            <i class="bi bi-send"></i> Опубликовать
+          </button>
         </div>
       </form>
     </div>
   </div>
 
   <div class="alert-aogiri alert-info-aogiri" style="margin-top:1rem;">
-    <i class="bi bi-info-circle"></i> Объявление пройдёт модерацию перед публикацией. Обычно это занимает до 24 часов.
+    <i class="bi bi-info-circle"></i>
+    Объявление пройдёт модерацию перед публикацией. Обычно это занимает до 24 часов.
   </div>
 </div>
+
+@section Scripts {
+<script>
+function previewImages(input) {
+    const row = document.getElementById('imgPreviewRow');
+    row.innerHTML = '';
+    [...input.files].forEach((file, i) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'position:relative;';
+            wrap.innerHTML = `
+              <img src="${e.target.result}"
+                   style="width:80px;height:80px;object-fit:cover;border-radius:6px;
+                          border:2px solid ${i===0?'#8B0000':'#333'};">
+              ${i===0?'<div style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:0.6rem;color:#fff;background:#8B0000;border-radius:3px;padding:0 3px;">обложка</div>':''}
+            `;
+            row.appendChild(wrap);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+</script>
+}
