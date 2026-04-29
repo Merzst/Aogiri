@@ -14,25 +14,19 @@ public class CabinetModel : PageModel
     public CabinetModel(ApplicationDbContext db, IWebHostEnvironment env)
     { _db = db; _env = env; }
 
-    // ── Данные страницы ──────────────────────────────────────────
     public User?               CurrentUser  { get; set; }
     public List<Advertisement> MyAds        { get; set; } = new();
-    public int   ActiveCount  { get; set; }
-    public int   PendingCount { get; set; }
-    public int   TotalViews   { get; set; }
+    public int ActiveCount  { get; set; }
+    public int PendingCount { get; set; }
+    public int TotalViews   { get; set; }
 
-    // ── Bind-свойства для формы профиля ─────────────────────────
-    [BindProperty] public string       Name   { get; set; } = string.Empty;
-    [BindProperty] public string       Phone  { get; set; } = string.Empty;
-    [BindProperty] public string?      Email  { get; set; }
-    [BindProperty] public IFormFile?   Avatar { get; set; }
-
-    // ── НОВОЕ: Bind-свойства для смены пароля ───────────────────
-    [BindProperty] public string OldPassword { get; set; } = string.Empty;
-    [BindProperty] public string NewPassword { get; set; } = string.Empty;
-    [BindProperty] public string ConfirmPassword { get; set; } = string.Empty;
-
-    // ────────────────────────────────────────────────────────────
+    [BindProperty] public string     Name            { get; set; } = string.Empty;
+    [BindProperty] public string     Phone           { get; set; } = string.Empty;
+    [BindProperty] public string?    Email           { get; set; }
+    [BindProperty] public IFormFile? Avatar          { get; set; }
+    [BindProperty] public string     OldPassword     { get; set; } = string.Empty;
+    [BindProperty] public string     NewPassword     { get; set; } = string.Empty;
+    [BindProperty] public string     ConfirmPassword { get; set; } = string.Empty;
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -75,9 +69,9 @@ public class CabinetModel : PageModel
             {
                 if (!string.IsNullOrEmpty(user.AvatarUrl) && user.AvatarUrl.StartsWith("/uploads/"))
                 {
-                    var oldPath = Path.Combine(_env.WebRootPath,
+                    var old = Path.Combine(_env.WebRootPath,
                         user.AvatarUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                    if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+                    if (System.IO.File.Exists(old)) System.IO.File.Delete(old);
                 }
                 var fileName = $"avatar_{uid}_{Guid.NewGuid():N}{ext}";
                 var savePath = Path.Combine(_env.WebRootPath, "uploads", fileName);
@@ -86,10 +80,7 @@ public class CabinetModel : PageModel
                 user.AvatarUrl = $"/uploads/{fileName}";
             }
             else
-            {
-                TempData["Error"] = "Формат аватарки должен быть JPG, PNG, WEBP или GIF";
-                return RedirectToPage();
-            }
+            { TempData["Error"] = "Формат аватарки должен быть JPG, PNG, WEBP или GIF"; return RedirectToPage(); }
         }
 
         user.Name = Name; user.Phone = Phone; user.Email = Email;
@@ -99,7 +90,7 @@ public class CabinetModel : PageModel
         return RedirectToPage();
     }
 
-    // ── НОВОЕ: Смена пароля ──────────────────────────────────────
+    // ── Смена пароля ─────────────────────────────────────────────
     public async Task<IActionResult> OnPostChangePasswordAsync()
     {
         var uid = HttpContext.Session.GetInt32("UserId");
@@ -108,7 +99,7 @@ public class CabinetModel : PageModel
         if (user == null) return RedirectToPage("/Account/Login");
 
         if (string.IsNullOrWhiteSpace(OldPassword) ||
-            string.IsNullOrWhiteSpace(NewPassword) ||
+            string.IsNullOrWhiteSpace(NewPassword)  ||
             string.IsNullOrWhiteSpace(ConfirmPassword))
         { TempData["Error"] = "Заполните все поля смены пароля"; return RedirectToPage(); }
 
@@ -119,7 +110,7 @@ public class CabinetModel : PageModel
         { TempData["Error"] = "Новый пароль должен содержать минимум 4 символа"; return RedirectToPage(); }
 
         if (NewPassword != ConfirmPassword)
-        { TempData["Error"] = "Новый пароль и его подтверждение не совпадают"; return RedirectToPage(); }
+        { TempData["Error"] = "Новый пароль и подтверждение не совпадают"; return RedirectToPage(); }
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(NewPassword);
         await _db.SaveChangesAsync();
@@ -127,7 +118,7 @@ public class CabinetModel : PageModel
         return RedirectToPage();
     }
 
-    // ── НОВОЕ: Продление объявления (+30 дней) ───────────────────
+    // ── Продление объявления ─────────────────────────────────────
     public async Task<IActionResult> OnPostRenewAdAsync(int adId)
     {
         var uid = HttpContext.Session.GetInt32("UserId");
@@ -137,13 +128,9 @@ public class CabinetModel : PageModel
         if (ad.Status != "Active" && ad.Status != "Inactive")
         { TempData["Error"] = "Продлить можно только активное или неактивное объявление"; return RedirectToPage(); }
 
-        // Если уже истекло — снова ставим в очередь на модерацию
         ad.ExpiryDate = (ad.ExpiryDate.HasValue && ad.ExpiryDate > DateTime.UtcNow
-            ? ad.ExpiryDate.Value
-            : DateTime.UtcNow)
-            .AddDays(30);
+            ? ad.ExpiryDate.Value : DateTime.UtcNow).AddDays(30);
 
-        // Неактивное объявление при продлении отправляется на модерацию
         if (ad.Status == "Inactive")
         {
             ad.Status = "Pending";
@@ -168,9 +155,9 @@ public class CabinetModel : PageModel
 
         if (!string.IsNullOrEmpty(user.AvatarUrl) && user.AvatarUrl.StartsWith("/uploads/"))
         {
-            var oldPath = Path.Combine(_env.WebRootPath,
+            var old = Path.Combine(_env.WebRootPath,
                 user.AvatarUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-            if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+            if (System.IO.File.Exists(old)) System.IO.File.Delete(old);
         }
         user.AvatarUrl = null;
         await _db.SaveChangesAsync();
@@ -190,17 +177,34 @@ public class CabinetModel : PageModel
         return RedirectToPage();
     }
 
-    // ── Деактивация / активация объявления ──────────────────────
+    // ── ИСПРАВЛЕНИЕ БАГ 2: деактивация/активация ────────────────
+    // Разрешаем переключение ТОЛЬКО между Active и Inactive.
+    // Pending, Rejected и другие статусы — не трогаем.
     public async Task<IActionResult> OnPostDeactivateAdAsync(int adId)
     {
         var uid = HttpContext.Session.GetInt32("UserId");
         var ad  = await _db.Advertisements.FindAsync(adId);
         if (ad == null || ad.UserID != uid) return Forbid();
-        ad.Status = ad.Status == "Active" ? "Inactive" : "Active";
-        await _db.SaveChangesAsync();
-        TempData["Success"] = ad.Status == "Active"
-            ? "Объявление активировано"
-            : "Объявление деактивировано";
+
+        if (ad.Status == "Active")
+        {
+            ad.Status = "Inactive";
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Объявление деактивировано";
+        }
+        else if (ad.Status == "Inactive")
+        {
+            // Возвращаем в Active — отправляем на повторную модерацию,
+            // чтобы объявление не обходило проверку
+            ad.Status = "Pending";
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Объявление отправлено на повторную модерацию";
+        }
+        else
+        {
+            TempData["Error"] = "Это объявление нельзя активировать напрямую";
+        }
+
         return RedirectToPage();
     }
 }

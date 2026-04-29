@@ -12,7 +12,7 @@
       <input id="searchQ" class="search-input" type="text" value="@Model.Query" placeholder="Что ищете? Например: ноутбук, велосипед...">
       <div class="search-divider"></div>
       <select id="searchCity" class="search-select">
-        <option value="">Весь Беларусь</option>
+        <option value="">Вся Беларусь</option>
         @foreach(var loc in Model.Locations){
           if(Model.City == loc.City){ <option value="@loc.City" selected>@loc.City</option> }
           else { <option value="@loc.City">@loc.City</option> }
@@ -172,9 +172,7 @@
 
 @section Scripts {
 <script>
-// ──────────────────────────────────────────────
 //  Единый менеджер фильтров
-// ──────────────────────────────────────────────
 function collectFilters() {
     return {
         q:          document.getElementById('searchQ')?.value.trim() || '',
