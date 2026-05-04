@@ -59,18 +59,10 @@
           </div>
 
           <!-- Подкатегория -->
-          <div class="form-group-aogiri" id="subcatBlock"
-               style="display:@(Model.SubcategoryID.HasValue ? "" : "none");">
+          <div class="form-group-aogiri" id="subcatBlock" style="display:none;">
             <label class="form-label-aogiri">Подкатегория</label>
             <select asp-for="SubcategoryID" id="subcategorySelect" class="form-control-aogiri">
               <option value="">— Все подкатегории —</option>
-              @foreach(var sub in Model.Subcategories){
-                <option value="@sub.SubcategoryID"
-                        data-cat="@sub.CategoryID"
-                         selected="@(Model.SubcategoryID == sub.SubcategoryID)">
-                  @sub.Name
-                </option>
-              }
             </select>
           </div>
 
@@ -112,10 +104,11 @@
             <label class="form-label-aogiri">Текущие фотографии</label>
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem;">
               @foreach(var img in Model.ExistingImages){
-              <div style="position:relative;display:inline-block;">
+              <div style="position:relative;display:inline-block;" id="imgWrap_@img.AdImageID">
                 <img src="@img.ImageUrl"
                      style="width:90px;height:90px;object-fit:cover;border-radius:6px;
-                            border:2px solid @(img.SortOrder==0?"#8B0000":"#333");">
+                            border:2px solid @(img.SortOrder==0?"#8B0000":"#333");"
+                     id="imgEl_@img.AdImageID">
                 @if(img.SortOrder == 0){
                 <div style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);
                             font-size:0.6rem;background:#8B0000;color:#fff;
@@ -125,9 +118,11 @@
                               color:#e74c3c;border-radius:50%;width:20px;height:20px;
                               display:flex;align-items:center;justify-content:center;
                               cursor:pointer;font-size:0.7rem;"
-                       title="Удалить">
+                       title="Удалить"
+                       onclick="toggleDeleteImage(@img.AdImageID, this)">
                   <input type="checkbox" name="DeleteImages" value="@img.AdImageID"
-                         style="display:none;" onchange="this.parentElement.style.opacity=this.checked?'0.3':'1'">
+                         id="del_@img.AdImageID"
+                         style="display:none;">
                   <i class="bi bi-x-lg"></i>
                 </label>
               </div>
@@ -167,33 +162,41 @@
 @section Scripts {
 <script>
 // ── Данные с сервера ─────────────────────────────────────────
-const CATEGORY_FIELDS   = @Html.Raw(Model.CategoryFieldsJson);
-const SUBCATEGORIES     = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+const CATEGORY_FIELDS  = @Html.Raw(Model.CategoryFieldsJson);
+const SUBCATEGORIES    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
     Model.Subcategories.Select(s => new { id = s.SubcategoryID, categoryId = s.CategoryID, name = s.Name })
 ));
-// Существующие атрибуты текущего объявления
-const EXISTING_ATTRS    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+// ИСПРАВЛЕНИЕ БАГ: приводим к числу, иначе === с s.id (number) не работало
+const CURRENT_CATEGORY = @(Model.CategoryID);
+const CURRENT_SUBCAT   = @(Model.SubcategoryID.HasValue ? Model.SubcategoryID.Value.ToString() : "null");
+
+// Существующие атрибуты — для восстановления значений полей
+const EXISTING_ATTRS   = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
     Model.Ad?.Attributes?.ToDictionary(a => a.Key, a => a.Value) ?? new Dictionary<string, string>()
 ));
-const CURRENT_CATEGORY  = @(Model.CategoryID);
-const CURRENT_SUBCAT    = @(Model.SubcategoryID?.ToString() ?? "null");
 
 // ── Инициализация при загрузке ───────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
     if (CURRENT_CATEGORY) {
+        // Подкатегории
         refreshSubcategories(CURRENT_CATEGORY);
+        // Динамические поля
         renderDynamicFields(CURRENT_CATEGORY);
     }
 });
 
 // ── Смена категории ──────────────────────────────────────────
 function onCategoryChange(catId) {
+    // При смене категории сбрасываем подкатегорию
+    const subcatSelect = document.getElementById('subcategorySelect');
+    if (subcatSelect) subcatSelect.value = '';
+
     refreshSubcategories(parseInt(catId));
     renderDynamicFields(parseInt(catId));
 }
 
 function refreshSubcategories(catNum) {
-    const subs       = SUBCATEGORIES.filter(s => s.categoryId === catNum);
+    const subs        = SUBCATEGORIES.filter(s => s.categoryId === catNum);
     const subcatBlock  = document.getElementById('subcatBlock');
     const subcatSelect = document.getElementById('subcategorySelect');
     subcatSelect.innerHTML = '<option value="">— Все подкатегории —</option>';
@@ -202,8 +205,8 @@ function refreshSubcategories(catNum) {
             const opt = document.createElement('option');
             opt.value       = s.id;
             opt.textContent = s.name;
-            // восстанавливаем выбранную подкатегорию
-            if (s.id === CURRENT_SUBCAT) opt.selected = true;
+            // ИСПРАВЛЕНИЕ БАГ: сравниваем числа, не строки
+            if (CURRENT_SUBCAT !== null && s.id === CURRENT_SUBCAT) opt.selected = true;
             subcatSelect.appendChild(opt);
         });
         subcatBlock.style.display = '';
@@ -241,17 +244,15 @@ function renderDynamicFields(catId) {
             (f.options || []).forEach(opt => {
                 const o = document.createElement('option');
                 o.value = opt; o.textContent = opt;
-                // восстанавливаем значение
                 if (EXISTING_ATTRS[f.key] === opt) o.selected = true;
                 input.appendChild(o);
             });
         } else {
             input = document.createElement('input');
-            input.type  = f.type === 'number' ? 'number' : 'text';
+            input.type        = f.type === 'number' ? 'number' : 'text';
             input.className   = 'form-control-aogiri';
             input.placeholder = f.unit ? `Например: 2019` : `Введите ${f.label.toLowerCase()}`;
             if (f.type === 'number') { input.min = '0'; input.step = '1'; }
-            // восстанавливаем значение
             if (EXISTING_ATTRS[f.key]) input.value = EXISTING_ATTRS[f.key];
         }
         input.name = `attr_${f.key}`;
@@ -259,6 +260,22 @@ function renderDynamicFields(catId) {
         div.appendChild(input);
         container.appendChild(div);
     });
+}
+
+// ── Удаление фото с визуальной индикацией ────────────────────
+function toggleDeleteImage(imgId, label) {
+    const checkbox = document.getElementById('del_' + imgId);
+    const wrap     = document.getElementById('imgWrap_' + imgId);
+    const imgEl    = document.getElementById('imgEl_' + imgId);
+    if (!checkbox) return;
+    checkbox.checked = !checkbox.checked;
+    if (checkbox.checked) {
+        if (imgEl)  imgEl.style.opacity   = '0.25';
+        if (label)  label.style.background = 'rgba(231,76,60,.9)';
+    } else {
+        if (imgEl)  imgEl.style.opacity   = '1';
+        if (label)  label.style.background = 'rgba(0,0,0,.7)';
+    }
 }
 
 // ── Превью новых фото ────────────────────────────────────────

@@ -51,7 +51,8 @@
           <!-- Категория -->
           <div class="form-group-aogiri">
             <label class="form-label-aogiri">Категория <span style="color:#c0392b">*</span></label>
-            <select asp-for="CategoryID" id="categorySelect" class="form-control-aogiri" onchange="onCategoryChange(this.value)">
+            <select asp-for="CategoryID" id="categorySelect" class="form-control-aogiri"
+                    onchange="onCategoryChange(this.value)">
               <option value="">— Выберите категорию —</option>
               @foreach(var cat in Model.Categories){
                 <option value="@cat.CategoryID">@cat.Name</option>
@@ -97,7 +98,6 @@
               <i class="bi bi-sliders"></i> Дополнительные характеристики
             </div>
             <div id="dynamicFieldsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-              <!-- Поля добавляются через JS -->
             </div>
           </div>
 
@@ -142,33 +142,52 @@ const SUBCATEGORIES   = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
     Model.Subcategories.Select(s => new { id = s.SubcategoryID, categoryId = s.CategoryID, name = s.Name })
 ));
 
+// ИСПРАВЛЕНИЕ: восстанавливаем состояние после POST-ошибки
+const CURRENT_CATEGORY = @(Model.CategoryID > 0 ? Model.CategoryID.ToString() : "0");
+const CURRENT_SUBCAT   = @(Model.SubcategoryID.HasValue ? Model.SubcategoryID.Value.ToString() : "0");
+
+// ── Инициализация при загрузке ───────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+    if (CURRENT_CATEGORY > 0) {
+        refreshSubcategories(CURRENT_CATEGORY);
+        renderDynamicFields(CURRENT_CATEGORY);
+    }
+});
+
 // ── Смена категории ──────────────────────────────────────────
 function onCategoryChange(catId) {
-    const catNum = parseInt(catId);
+    // Сбрасываем подкатегорию при смене категории
+    const subcatSelect = document.getElementById('subcategorySelect');
+    if (subcatSelect) subcatSelect.value = '';
 
-    // Подкатегории
-    const subs = SUBCATEGORIES.filter(s => s.categoryId === catNum);
-    const subcatBlock = document.getElementById('subcatBlock');
+    refreshSubcategories(parseInt(catId));
+    renderDynamicFields(parseInt(catId));
+}
+
+function refreshSubcategories(catNum) {
+    catNum = parseInt(catNum);
+    const subs        = SUBCATEGORIES.filter(s => s.categoryId === catNum);
+    const subcatBlock  = document.getElementById('subcatBlock');
     const subcatSelect = document.getElementById('subcategorySelect');
     subcatSelect.innerHTML = '<option value="">— Все подкатегории —</option>';
     if (subs.length > 0) {
         subs.forEach(s => {
             const opt = document.createElement('option');
-            opt.value = s.id;
+            opt.value       = s.id;
             opt.textContent = s.name;
+            // Восстанавливаем после POST-ошибки
+            if (CURRENT_SUBCAT > 0 && s.id === CURRENT_SUBCAT) opt.selected = true;
             subcatSelect.appendChild(opt);
         });
         subcatBlock.style.display = '';
     } else {
         subcatBlock.style.display = 'none';
     }
-
-    // Динамические поля
-    renderDynamicFields(catNum);
 }
 
 function renderDynamicFields(catId) {
-    const fields = CATEGORY_FIELDS[catId] || [];
+    catId = parseInt(catId);
+    const fields    = CATEGORY_FIELDS[catId] || [];
     const container = document.getElementById('dynamicFieldsGrid');
     const wrapper   = document.getElementById('dynamicFields');
     container.innerHTML = '';
@@ -201,7 +220,7 @@ function renderDynamicFields(catId) {
         } else {
             input = document.createElement('input');
             input.type = f.type === 'number' ? 'number' : 'text';
-            input.className = 'form-control-aogiri';
+            input.className   = 'form-control-aogiri';
             input.placeholder = f.unit ? `Например: 2019` : `Введите ${f.label.toLowerCase()}`;
             if (f.type === 'number') { input.min = '0'; input.step = '1'; }
         }
