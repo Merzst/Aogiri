@@ -41,7 +41,9 @@ public class CabinetModel : PageModel
         Email = CurrentUser.Email;
 
         MyAds = await _db.Advertisements
-            .Include(a => a.Category).Include(a => a.Location)
+            .Include(a => a.Category)
+            .Include(a => a.Subcategory)
+            .Include(a => a.Location)
             .Where(a => a.UserID == uid && a.Status != "Deleted")
             .OrderByDescending(a => a.PublishedDate).ToListAsync();
 
@@ -51,7 +53,6 @@ public class CabinetModel : PageModel
         return Page();
     }
 
-    // ── Обновление профиля ───────────────────────────────────────
     public async Task<IActionResult> OnPostUpdateProfileAsync()
     {
         var uid = HttpContext.Session.GetInt32("UserId");
@@ -90,7 +91,6 @@ public class CabinetModel : PageModel
         return RedirectToPage();
     }
 
-    // ── Смена пароля ─────────────────────────────────────────────
     public async Task<IActionResult> OnPostChangePasswordAsync()
     {
         var uid = HttpContext.Session.GetInt32("UserId");
@@ -118,7 +118,6 @@ public class CabinetModel : PageModel
         return RedirectToPage();
     }
 
-    // ── Продление объявления ─────────────────────────────────────
     public async Task<IActionResult> OnPostRenewAdAsync(int adId)
     {
         var uid = HttpContext.Session.GetInt32("UserId");
@@ -145,7 +144,6 @@ public class CabinetModel : PageModel
         return RedirectToPage();
     }
 
-    // ── Удаление аватарки ────────────────────────────────────────
     public async Task<IActionResult> OnPostRemoveAvatarAsync()
     {
         var uid  = HttpContext.Session.GetInt32("UserId");
@@ -165,7 +163,6 @@ public class CabinetModel : PageModel
         return RedirectToPage();
     }
 
-    // ── Удаление объявления ──────────────────────────────────────
     public async Task<IActionResult> OnPostDeleteAdAsync(int adId)
     {
         var uid = HttpContext.Session.GetInt32("UserId");
@@ -177,9 +174,6 @@ public class CabinetModel : PageModel
         return RedirectToPage();
     }
 
-    // ── ИСПРАВЛЕНИЕ БАГ 2: деактивация/активация ────────────────
-    // Разрешаем переключение ТОЛЬКО между Active и Inactive.
-    // Pending, Rejected и другие статусы — не трогаем.
     public async Task<IActionResult> OnPostDeactivateAdAsync(int adId)
     {
         var uid = HttpContext.Session.GetInt32("UserId");
@@ -194,8 +188,6 @@ public class CabinetModel : PageModel
         }
         else if (ad.Status == "Inactive")
         {
-            // Возвращаем в Active — отправляем на повторную модерацию,
-            // чтобы объявление не обходило проверку
             ad.Status = "Pending";
             await _db.SaveChangesAsync();
             TempData["Success"] = "Объявление отправлено на повторную модерацию";

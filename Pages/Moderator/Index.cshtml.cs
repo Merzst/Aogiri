@@ -13,7 +13,7 @@ public class IndexModel : PageModel
 
     public List<Advertisement> PendingAds { get; set; } = new();
     public List<User>          Users      { get; set; } = new();
-    public List<Report>        Reports    { get; set; } = new(); // НОВОЕ
+    public List<Report>        Reports    { get; set; } = new();
 
     public string Tab { get; set; } = "ads";
     [BindProperty] public string RejectionReason { get; set; } = string.Empty;
@@ -25,13 +25,15 @@ public class IndexModel : PageModel
         Tab = tab;
 
         PendingAds = await _db.Advertisements
-            .Include(a => a.User).Include(a => a.Category).Include(a => a.Location)
+            .Include(a => a.User)
+            .Include(a => a.Category)
+            .Include(a => a.Subcategory)
+            .Include(a => a.Location)
             .Where(a => a.Status == "Pending")
             .OrderBy(a => a.PublishedDate).ToListAsync();
 
         Users = await _db.Users.OrderBy(u => u.Name).ToListAsync();
 
-        // НОВОЕ: загрузка непросмотренных жалоб
         Reports = await _db.Reports
             .Include(r => r.User)
             .Include(r => r.Advertisement).ThenInclude(a => a.User)
@@ -95,7 +97,6 @@ public class IndexModel : PageModel
         return RedirectToPage(new { tab = "users" });
     }
 
-    // ── НОВОЕ: пометить жалобу как просмотренную ────────────────
     public async Task<IActionResult> OnPostReviewReportAsync(int reportId)
     {
         var role = HttpContext.Session.GetString("UserRole");
@@ -106,7 +107,6 @@ public class IndexModel : PageModel
         return RedirectToPage(new { tab = "reports" });
     }
 
-    // ── НОВОЕ: удалить жалобу ────────────────────────────────────
     public async Task<IActionResult> OnPostDeleteReportAsync(int reportId)
     {
         var role = HttpContext.Session.GetString("UserRole");

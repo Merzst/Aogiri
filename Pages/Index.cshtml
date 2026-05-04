@@ -23,7 +23,7 @@
   </div>
 </section>
 
-<!-- CATEGORIES — каждая кнопка сохраняет текущие фильтры -->
+<!-- CATEGORIES -->
 <section class="categories-section">
   <div style="max-width:1280px;margin:0 auto;padding:0 1.5rem;">
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
@@ -37,18 +37,40 @@
         </button>
       }
     </div>
+
+    @* ── Подкатегории (показываем если выбрана категория) ── *@
+    @if(Model.CategoryId.HasValue && Model.Subcategories.Any()){
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.5rem;padding-left:0.2rem;">
+      <button type="button" onclick="setSubcategory('')"
+              class="category-pill @(Model.SubcategoryId==null?"active":"")"
+              style="font-size:0.78rem;padding:0.25rem 0.7rem;">
+        <i class="bi bi-list"></i> Все подкатегории
+      </button>
+      @foreach(var sub in Model.Subcategories){
+        <button type="button" onclick="setSubcategory('@sub.SubcategoryID')"
+                class="category-pill @(Model.SubcategoryId==sub.SubcategoryID?"active":"")"
+                style="font-size:0.78rem;padding:0.25rem 0.7rem;">
+          @if(!string.IsNullOrEmpty(sub.IconClass)){<i class="bi @sub.IconClass"></i>}
+          @sub.Name
+        </button>
+      }
+    </div>
+    }
   </div>
 </section>
 
-<!-- Скрытая форма — единственный источник истины для всех фильтров -->
+<!-- Скрытая форма -->
 <form id="filterForm" method="get" action="/" style="display:none;">
-  <input type="hidden" id="fQ"          name="q"          value="@Model.Query">
-  <input type="hidden" id="fCategoryId" name="categoryId" value="@Model.CategoryId">
-  <input type="hidden" id="fCity"       name="city"       value="@Model.City">
-  <input type="hidden" id="fMinPrice"   name="minPrice"   value="@Model.MinPrice">
-  <input type="hidden" id="fMaxPrice"   name="maxPrice"   value="@Model.MaxPrice">
-  <input type="hidden" id="fSort"       name="sort"       value="@Model.Sort">
-  <input type="hidden" id="fPage"       name="page"       value="1">
+  <input type="hidden" id="fQ"             name="q"             value="@Model.Query">
+  <input type="hidden" id="fCategoryId"    name="categoryId"    value="@Model.CategoryId">
+  <input type="hidden" id="fSubcategoryId" name="subcategoryId" value="@Model.SubcategoryId">
+  <input type="hidden" id="fCity"          name="city"          value="@Model.City">
+  <input type="hidden" id="fMinPrice"      name="minPrice"      value="@Model.MinPrice">
+  <input type="hidden" id="fMaxPrice"      name="maxPrice"      value="@Model.MaxPrice">
+  <input type="hidden" id="fSort"          name="sort"          value="@Model.Sort">
+  <input type="hidden" id="fCondition"     name="condition"     value="@Model.Condition">
+  <input type="hidden" id="fDealType"      name="dealType"      value="@Model.DealType">
+  <input type="hidden" id="fPage"          name="page"          value="1">
 </form>
 
 <div style="max-width:1280px;margin:0 auto;padding:0 1.5rem 3rem;">
@@ -59,7 +81,6 @@
       <div class="aogiri-card">
         <div class="aogiri-card-header"><i class="bi bi-funnel"></i> Фильтры</div>
         <div class="aogiri-card-body">
-          <!-- Всё управляется через JS + скрытую форму -->
           <div class="form-group-aogiri">
             <label class="form-label-aogiri">Цена, руб.</label>
             <div class="price-range-inputs">
@@ -79,6 +100,26 @@
             </select>
           </div>
           <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Состояние</label>
+            <select id="uiCondition" class="form-control-aogiri">
+              <option value="">Любое</option>
+              @foreach(var c in new[]{"Новое","Б/у — отличное","Б/у — хорошее","Б/у — удовлетворительное"}){
+                if(Model.Condition == c){ <option value="@c" selected>@c</option> }
+                else { <option value="@c">@c</option> }
+              }
+            </select>
+          </div>
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Тип сделки</label>
+            <select id="uiDealType" class="form-control-aogiri">
+              <option value="">Любой</option>
+              @foreach(var d in new[]{"Продажа","Аренда","Обмен","Отдам бесплатно"}){
+                if(Model.DealType == d){ <option value="@d" selected>@d</option> }
+                else { <option value="@d">@d</option> }
+              }
+            </select>
+          </div>
+          <div class="form-group-aogiri">
             <label class="form-label-aogiri">Сортировка</label>
             <select id="uiSort" class="form-control-aogiri">
               @if(Model.Sort=="newest"){ <option value="newest" selected>Сначала новые</option> } else { <option value="newest">Сначала новые</option> }
@@ -94,14 +135,16 @@
             <i class="bi bi-x"></i> Сбросить
           </button>
 
-          <!-- Активные фильтры -->
           @{
             var activeFilters = new List<string>();
-            if (!string.IsNullOrEmpty(Model.Query))      activeFilters.Add("Поиск: «" + Model.Query + "»");
-            if (Model.CategoryId.HasValue)               activeFilters.Add("Категория выбрана");
-            if (!string.IsNullOrEmpty(Model.City))       activeFilters.Add("Город: " + Model.City);
-            if (Model.MinPrice.HasValue)                 activeFilters.Add("от " + Model.MinPrice + " р.");
-            if (Model.MaxPrice.HasValue)                 activeFilters.Add("до " + Model.MaxPrice + " р.");
+            if (!string.IsNullOrEmpty(Model.Query))        activeFilters.Add("Поиск: «" + Model.Query + "»");
+            if (Model.CategoryId.HasValue)                 activeFilters.Add("Категория выбрана");
+            if (Model.SubcategoryId.HasValue)              activeFilters.Add("Подкатегория выбрана");
+            if (!string.IsNullOrEmpty(Model.City))         activeFilters.Add("Город: " + Model.City);
+            if (Model.MinPrice.HasValue)                   activeFilters.Add("от " + Model.MinPrice + " р.");
+            if (Model.MaxPrice.HasValue)                   activeFilters.Add("до " + Model.MaxPrice + " р.");
+            if (!string.IsNullOrEmpty(Model.Condition))    activeFilters.Add("Состояние: " + Model.Condition);
+            if (!string.IsNullOrEmpty(Model.DealType))     activeFilters.Add("Сделка: " + Model.DealType);
           }
           @if(activeFilters.Any()){
           <div style="margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid #3a3a3a;">
@@ -149,6 +192,19 @@
                 <span><i class="bi bi-clock"></i> @ad.PublishedDate.ToString("dd.MM")</span>
                 <span><i class="bi bi-eye"></i> @ad.ViewCount</span>
               </div>
+              @if(ad.Subcategory != null || !string.IsNullOrEmpty(ad.Condition) || !string.IsNullOrEmpty(ad.DealType)){
+              <div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-top:0.3rem;">
+                @if(ad.Subcategory != null){
+                  <span style="font-size:0.68rem;background:#1e1e1e;color:#888;border-radius:3px;padding:1px 5px;">@ad.Subcategory.Name</span>
+                }
+                @if(!string.IsNullOrEmpty(ad.Condition)){
+                  <span style="font-size:0.68rem;background:#1e1e1e;color:#888;border-radius:3px;padding:1px 5px;">@ad.Condition</span>
+                }
+                @if(!string.IsNullOrEmpty(ad.DealType)){
+                  <span style="font-size:0.68rem;background:#2a1010;color:#c0392b;border-radius:3px;padding:1px 5px;">@ad.DealType</span>
+                }
+              </div>
+              }
             </div>
           </a>
           }
@@ -172,35 +228,37 @@
 
 @section Scripts {
 <script>
-
-  
-//  Единый менеджер фильтров
 function collectFilters() {
     return {
-        q:          document.getElementById('searchQ')?.value.trim() || '',
-        categoryId: document.getElementById('fCategoryId').value,
-        city:       document.getElementById('uiCity').value,
-        minPrice:   document.getElementById('uiMinPrice').value,
-        maxPrice:   document.getElementById('uiMaxPrice').value,
-        sort:       document.getElementById('uiSort').value,
-        page:       '1'
+        q:             document.getElementById('searchQ')?.value.trim() || '',
+        categoryId:    document.getElementById('fCategoryId').value,
+        subcategoryId: document.getElementById('fSubcategoryId').value,
+        city:          document.getElementById('uiCity').value,
+        minPrice:      document.getElementById('uiMinPrice').value,
+        maxPrice:      document.getElementById('uiMaxPrice').value,
+        sort:          document.getElementById('uiSort').value,
+        condition:     document.getElementById('uiCondition').value,
+        dealType:      document.getElementById('uiDealType').value,
+        page:          '1'
     };
 }
 
 function submitFilters(overrides = {}) {
     const f = { ...collectFilters(), ...overrides };
-    document.getElementById('fQ').value          = f.q;
-    document.getElementById('fCategoryId').value = f.categoryId;
-    document.getElementById('fCity').value        = f.city;
-    document.getElementById('fMinPrice').value    = f.minPrice;
-    document.getElementById('fMaxPrice').value    = f.maxPrice;
-    document.getElementById('fSort').value        = f.sort;
-    document.getElementById('fPage').value        = f.page;
+    document.getElementById('fQ').value             = f.q;
+    document.getElementById('fCategoryId').value    = f.categoryId;
+    document.getElementById('fSubcategoryId').value = f.subcategoryId;
+    document.getElementById('fCity').value          = f.city;
+    document.getElementById('fMinPrice').value      = f.minPrice;
+    document.getElementById('fMaxPrice').value      = f.maxPrice;
+    document.getElementById('fSort').value          = f.sort;
+    document.getElementById('fCondition').value     = f.condition;
+    document.getElementById('fDealType').value      = f.dealType;
+    document.getElementById('fPage').value          = f.page;
     document.getElementById('filterForm').submit();
 }
 
 function applyFilters() {
-    // Синхронизируем поисковую строку сверху
     submitFilters({
         q:    document.getElementById('searchQ').value.trim(),
         city: document.getElementById('searchCity').value || document.getElementById('uiCity').value
@@ -208,16 +266,21 @@ function applyFilters() {
 }
 
 function setCategory(catId) {
-    // Меняем только категорию, остальные фильтры сохраняем
-    submitFilters({ categoryId: catId });
+    // При смене категории сбрасываем подкатегорию
+    submitFilters({ categoryId: catId, subcategoryId: '' });
+}
+
+function setSubcategory(subId) {
+    submitFilters({ subcategoryId: subId });
 }
 
 function resetFilters() {
-    document.getElementById('filterForm').action = '/';
-    ['fQ','fCategoryId','fCity','fMinPrice','fMaxPrice','fSort','fPage'].forEach(id => {
+    ['fQ','fCategoryId','fSubcategoryId','fCity','fMinPrice','fMaxPrice',
+     'fCondition','fDealType','fPage'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.value = id === 'fSort' ? 'newest' : id === 'fPage' ? '1' : '';
+        if (el) el.value = id === 'fPage' ? '1' : '';
     });
+    document.getElementById('fSort').value = 'newest';
     document.getElementById('filterForm').submit();
 }
 
@@ -225,7 +288,6 @@ function goToPage(page) {
     submitFilters({ page: page.toString() });
 }
 
-// Синхронизируем город между Hero-поиском и sidebar
 document.getElementById('searchCity')?.addEventListener('change', function() {
     document.getElementById('uiCity').value = this.value;
 });

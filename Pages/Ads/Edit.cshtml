@@ -15,33 +15,95 @@
       }
       <form method="post" enctype="multipart/form-data">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+
+          <!-- Заголовок -->
           <div class="form-group-aogiri" style="grid-column:1/-1;">
-            <label class="form-label-aogiri">Заголовок *</label>
-            <input asp-for="Title" class="form-control-aogiri">
+            <label class="form-label-aogiri">Заголовок <span style="color:#c0392b">*</span></label>
+            <input asp-for="Title" class="form-control-aogiri" placeholder="Например: Продам iPhone 13 128GB">
           </div>
+
+          <!-- Описание -->
           <div class="form-group-aogiri" style="grid-column:1/-1;">
             <label class="form-label-aogiri">Описание</label>
             <textarea asp-for="Description" class="form-control-aogiri" rows="5"></textarea>
           </div>
+
+          <!-- Цена -->
           <div class="form-group-aogiri">
-            <label class="form-label-aogiri">Цена (руб.) *</label>
+            <label class="form-label-aogiri">Цена (руб.) <span style="color:#c0392b">*</span></label>
             <input asp-for="Price" type="number" min="0" step="0.01" class="form-control-aogiri">
           </div>
+
+          <!-- Тип сделки -->
           <div class="form-group-aogiri">
-            <label class="form-label-aogiri">Категория *</label>
-            <select asp-for="CategoryID" class="form-control-aogiri">
+            <label class="form-label-aogiri">Тип сделки</label>
+            <select asp-for="DealType" class="form-control-aogiri">
+              <option value="">— Не указано —</option>
+              <option value="Продажа">Продажа</option>
+              <option value="Аренда">Аренда</option>
+              <option value="Обмен">Обмен</option>
+              <option value="Отдам бесплатно">Отдам бесплатно</option>
+            </select>
+          </div>
+
+          <!-- Категория -->
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Категория <span style="color:#c0392b">*</span></label>
+            <select asp-for="CategoryID" id="categorySelect" class="form-control-aogiri"
+                    onchange="onCategoryChange(this.value)">
+              <option value="">— Выберите категорию —</option>
               @foreach(var cat in Model.Categories){
                 <option value="@cat.CategoryID">@cat.Name</option>
               }
             </select>
           </div>
-          <div class="form-group-aogiri">
-            <label class="form-label-aogiri">Город *</label>
-            <select asp-for="LocationID" class="form-control-aogiri">
-              @foreach(var loc in Model.Locations){
-                <option value="@loc.LocationID">@loc.City</option>
+
+          <!-- Подкатегория -->
+          <div class="form-group-aogiri" id="subcatBlock"
+               style="display:@(Model.SubcategoryID.HasValue ? "" : "none");">
+            <label class="form-label-aogiri">Подкатегория</label>
+            <select asp-for="SubcategoryID" id="subcategorySelect" class="form-control-aogiri">
+              <option value="">— Все подкатегории —</option>
+              @foreach(var sub in Model.Subcategories){
+                <option value="@sub.SubcategoryID"
+                        data-cat="@sub.CategoryID"
+                         selected="@(Model.SubcategoryID == sub.SubcategoryID)">
+                  @sub.Name
+                </option>
               }
             </select>
+          </div>
+
+          <!-- Состояние -->
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Состояние</label>
+            <select asp-for="Condition" class="form-control-aogiri">
+              <option value="">— Не указано —</option>
+              <option value="Новое">Новое</option>
+              <option value="Б/у — отличное">Б/у — отличное</option>
+              <option value="Б/у — хорошее">Б/у — хорошее</option>
+              <option value="Б/у — удовлетворительное">Б/у — удовлетворительное</option>
+            </select>
+          </div>
+
+          <!-- Город -->
+          <div class="form-group-aogiri">
+            <label class="form-label-aogiri">Город <span style="color:#c0392b">*</span></label>
+            <select asp-for="LocationID" class="form-control-aogiri">
+              @foreach(var loc in Model.Locations){
+                <option value="@loc.LocationID">@loc.City (@loc.Region)</option>
+              }
+            </select>
+          </div>
+
+          <!-- Динамические поля по категории -->
+          <div id="dynamicFields" style="grid-column:1/-1;display:none;">
+            <div class="divider" style="margin:0.5rem 0;"></div>
+            <div style="font-size:0.85rem;color:#888;margin-bottom:0.8rem;">
+              <i class="bi bi-sliders"></i> Дополнительные характеристики
+            </div>
+            <div id="dynamicFieldsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            </div>
           </div>
 
           @* ── Текущие фото ── *@
@@ -104,6 +166,102 @@
 
 @section Scripts {
 <script>
+// ── Данные с сервера ─────────────────────────────────────────
+const CATEGORY_FIELDS   = @Html.Raw(Model.CategoryFieldsJson);
+const SUBCATEGORIES     = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.Subcategories.Select(s => new { id = s.SubcategoryID, categoryId = s.CategoryID, name = s.Name })
+));
+// Существующие атрибуты текущего объявления
+const EXISTING_ATTRS    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.Ad?.Attributes?.ToDictionary(a => a.Key, a => a.Value) ?? new Dictionary<string, string>()
+));
+const CURRENT_CATEGORY  = @(Model.CategoryID);
+const CURRENT_SUBCAT    = @(Model.SubcategoryID?.ToString() ?? "null");
+
+// ── Инициализация при загрузке ───────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+    if (CURRENT_CATEGORY) {
+        refreshSubcategories(CURRENT_CATEGORY);
+        renderDynamicFields(CURRENT_CATEGORY);
+    }
+});
+
+// ── Смена категории ──────────────────────────────────────────
+function onCategoryChange(catId) {
+    refreshSubcategories(parseInt(catId));
+    renderDynamicFields(parseInt(catId));
+}
+
+function refreshSubcategories(catNum) {
+    const subs       = SUBCATEGORIES.filter(s => s.categoryId === catNum);
+    const subcatBlock  = document.getElementById('subcatBlock');
+    const subcatSelect = document.getElementById('subcategorySelect');
+    subcatSelect.innerHTML = '<option value="">— Все подкатегории —</option>';
+    if (subs.length > 0) {
+        subs.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value       = s.id;
+            opt.textContent = s.name;
+            // восстанавливаем выбранную подкатегорию
+            if (s.id === CURRENT_SUBCAT) opt.selected = true;
+            subcatSelect.appendChild(opt);
+        });
+        subcatBlock.style.display = '';
+    } else {
+        subcatBlock.style.display = 'none';
+    }
+}
+
+function renderDynamicFields(catId) {
+    const fields    = CATEGORY_FIELDS[catId] || [];
+    const container = document.getElementById('dynamicFieldsGrid');
+    const wrapper   = document.getElementById('dynamicFields');
+    container.innerHTML = '';
+
+    if (fields.length === 0) { wrapper.style.display = 'none'; return; }
+    wrapper.style.display = '';
+
+    fields.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'form-group-aogiri';
+
+        const label = document.createElement('label');
+        label.className   = 'form-label-aogiri';
+        label.textContent = f.label + (f.unit ? ` (${f.unit})` : '');
+        if (f.required) label.innerHTML += ' <span style="color:#c0392b">*</span>';
+        div.appendChild(label);
+
+        let input;
+        if (f.type === 'select') {
+            input = document.createElement('select');
+            input.className = 'form-control-aogiri';
+            const blank = document.createElement('option');
+            blank.value = ''; blank.textContent = '— Выберите —';
+            input.appendChild(blank);
+            (f.options || []).forEach(opt => {
+                const o = document.createElement('option');
+                o.value = opt; o.textContent = opt;
+                // восстанавливаем значение
+                if (EXISTING_ATTRS[f.key] === opt) o.selected = true;
+                input.appendChild(o);
+            });
+        } else {
+            input = document.createElement('input');
+            input.type  = f.type === 'number' ? 'number' : 'text';
+            input.className   = 'form-control-aogiri';
+            input.placeholder = f.unit ? `Например: 2019` : `Введите ${f.label.toLowerCase()}`;
+            if (f.type === 'number') { input.min = '0'; input.step = '1'; }
+            // восстанавливаем значение
+            if (EXISTING_ATTRS[f.key]) input.value = EXISTING_ATTRS[f.key];
+        }
+        input.name = `attr_${f.key}`;
+        if (f.required) input.required = true;
+        div.appendChild(input);
+        container.appendChild(div);
+    });
+}
+
+// ── Превью новых фото ────────────────────────────────────────
 function previewNew(input) {
     const row = document.getElementById('newPreviewRow');
     row.innerHTML = '';

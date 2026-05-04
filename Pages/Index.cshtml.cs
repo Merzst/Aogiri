@@ -46,11 +46,16 @@ public class IndexModel : PageModel
         Condition     = condition;
         DealType      = dealType;
 
-        Categories    = await _db.Categories.OrderBy(c => c.Name).ToListAsync();
-        Subcategories = await _db.Subcategories
-            .Where(s => categoryId == null || s.CategoryID == categoryId)
-            .OrderBy(s => s.Name).ToListAsync();
-        Locations     = await _db.Locations.OrderBy(l => l.City).ToListAsync();
+        Categories = await _db.Categories.OrderBy(c => c.Name).ToListAsync();
+
+        // Подкатегории — только если выбрана категория
+        Subcategories = categoryId.HasValue
+            ? await _db.Subcategories
+                .Where(s => s.CategoryID == categoryId)
+                .OrderBy(s => s.Name).ToListAsync()
+            : new List<Subcategory>();
+
+        Locations = await _db.Locations.OrderBy(l => l.City).ToListAsync();
 
         var query = _db.Advertisements
             .Include(a => a.Category)
@@ -60,15 +65,17 @@ public class IndexModel : PageModel
             .Where(a => a.Status == "Active");
 
         if (!string.IsNullOrWhiteSpace(q))
-            query = query.Where(a => a.Title.Contains(q) || (a.Description != null && a.Description.Contains(q)));
+            query = query.Where(a =>
+                a.Title.Contains(q) ||
+                (a.Description != null && a.Description.Contains(q)));
 
-        if (categoryId.HasValue)    query = query.Where(a => a.CategoryID == categoryId);
+        if (categoryId.HasValue)    query = query.Where(a => a.CategoryID    == categoryId);
         if (subcategoryId.HasValue) query = query.Where(a => a.SubcategoryID == subcategoryId);
-        if (!string.IsNullOrEmpty(city)) query = query.Where(a => a.Location.City == city);
-        if (minPrice.HasValue)      query = query.Where(a => a.Price >= minPrice);
-        if (maxPrice.HasValue)      query = query.Where(a => a.Price <= maxPrice);
-        if (!string.IsNullOrEmpty(condition))  query = query.Where(a => a.Condition == condition);
-        if (!string.IsNullOrEmpty(dealType))   query = query.Where(a => a.DealType  == dealType);
+        if (!string.IsNullOrEmpty(city))      query = query.Where(a => a.Location.City == city);
+        if (minPrice.HasValue)                query = query.Where(a => a.Price >= minPrice);
+        if (maxPrice.HasValue)                query = query.Where(a => a.Price <= maxPrice);
+        if (!string.IsNullOrEmpty(condition)) query = query.Where(a => a.Condition == condition);
+        if (!string.IsNullOrEmpty(dealType))  query = query.Where(a => a.DealType  == dealType);
 
         query = sort switch
         {

@@ -16,10 +16,10 @@
         <div class="aogiri-card-body" style="padding:1.5rem;">
 
           @* ═══════════════════════════════════════════════════
-             ГАЛЕРЕЯ — вписывается в экран без прокрутки
+             ГАЛЕРЕЯ
              ═══════════════════════════════════════════════════ *@
           @{
-            var imgs = Model.Images;
+            var imgs    = Model.Images;
             bool hasImgs = imgs.Any();
           }
 
@@ -32,7 +32,6 @@
                    style="max-width:100%;max-height:55vh;object-fit:contain;display:block;">
 
               @if(imgs.Count > 1){
-              <!-- Стрелки -->
               <button onclick="changePhoto(-1)"
                       style="position:absolute;left:8px;top:50%;transform:translateY(-50%);
                              background:rgba(0,0,0,.6);border:none;color:#fff;
@@ -48,7 +47,6 @@
                 <i class="bi bi-chevron-right"></i>
               </button>
 
-              <!-- Счётчик -->
               <div id="photoCounter"
                    style="position:absolute;bottom:8px;right:10px;
                           background:rgba(0,0,0,.6);color:#fff;
@@ -59,7 +57,6 @@
             </div>
 
             @if(imgs.Count > 1){
-            <!-- Миниатюры -->
             <div style="display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:4px;">
               @for(int i = 0; i < imgs.Count; i++){
               <img src="@imgs[i].ImageUrl"
@@ -73,14 +70,12 @@
             }
           </div>
           } else {
-          <!-- Нет фото -->
           <div style="height:200px;background:#1a1a1a;border-radius:8px;
                       display:flex;align-items:center;justify-content:center;
                       color:#444;font-size:2.5rem;margin-bottom:1.2rem;">
             <i class="bi bi-image"></i>
           </div>
           }
-          @* ═══════════════════════════════════════════════════ *@
 
           <!-- Title & Price -->
           <div class="ad-detail-price">@Model.Ad.Price.ToString("N0") руб.</div>
@@ -89,9 +84,18 @@
           <!-- Meta pills -->
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
             <span class="info-pill"><i class="bi bi-grid"></i> @Model.Ad.Category.Name</span>
+            @if(Model.Ad.Subcategory != null){
+              <span class="info-pill"><i class="bi bi-diagram-3"></i> @Model.Ad.Subcategory.Name</span>
+            }
             <span class="info-pill"><i class="bi bi-geo-alt"></i> @Model.Ad.Location.City</span>
             <span class="info-pill"><i class="bi bi-clock"></i> @Model.Ad.PublishedDate.ToString("dd.MM.yyyy")</span>
             <span class="info-pill"><i class="bi bi-eye"></i> @Model.Ad.ViewCount просмотров</span>
+            @if(!string.IsNullOrEmpty(Model.Ad.Condition)){
+              <span class="info-pill"><i class="bi bi-check-circle"></i> @Model.Ad.Condition</span>
+            }
+            @if(!string.IsNullOrEmpty(Model.Ad.DealType)){
+              <span class="info-pill" style="color:#c0392b;"><i class="bi bi-tag"></i> @Model.Ad.DealType</span>
+            }
             @if(Model.Ad.ExpiryDate.HasValue){
               var dLeft = (int)(Model.Ad.ExpiryDate.Value - DateTime.UtcNow).TotalDays;
               var dCol  = dLeft <= 3 ? "#e74c3c" : (dLeft <= 7 ? "#e67e22" : "#888");
@@ -124,6 +128,22 @@
           @if(!string.IsNullOrEmpty(Model.Ad.Description)){
           <div class="divider"></div>
           <div style="font-size:0.9rem;line-height:1.7;color:#ccc;">@Model.Ad.Description</div>
+          }
+
+          @* ── Дополнительные характеристики ── *@
+          @if(Model.Ad.Attributes != null && Model.Ad.Attributes.Any()){
+          <div class="divider"></div>
+          <div style="font-size:0.85rem;color:#888;margin-bottom:0.8rem;font-weight:600;">
+            <i class="bi bi-sliders"></i> Характеристики
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.5rem;">
+            @foreach(var attr in Model.Ad.Attributes){
+            <div style="background:#1a1a1a;border-radius:6px;padding:0.5rem 0.8rem;border:1px solid #2a2a2a;">
+              <div style="font-size:0.72rem;color:#666;margin-bottom:2px;">@attr.Key</div>
+              <div style="font-size:0.88rem;color:#e8e8e8;font-weight:500;">@attr.Value</div>
+            </div>
+            }
+          </div>
           }
 
           <!-- Owner actions -->
@@ -206,17 +226,18 @@ let   current = 0;
 function selectPhoto(idx) {
     current = idx;
     document.getElementById('mainPhoto').src = photos[idx];
-    document.getElementById('photoCounter').textContent = `${idx+1} / ${photos.length}`;
+    const counter = document.getElementById('photoCounter');
+    if (counter) counter.textContent = `${idx+1} / ${photos.length}`;
     document.querySelectorAll('[id^="thumb_"]').forEach((t, i) => {
         t.style.borderColor = i === idx ? '#8B0000' : '#333';
     });
 }
 
 function changePhoto(dir) {
+    if (photos.length === 0) return;
     selectPhoto((current + dir + photos.length) % photos.length);
 }
 
-// Стрелки с клавиатуры
 document.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft')  changePhoto(-1);
     if (e.key === 'ArrowRight') changePhoto(1);
