@@ -11,10 +11,10 @@ public class DetailModel : PageModel
     private readonly ApplicationDbContext _db;
     public DetailModel(ApplicationDbContext db) { _db = db; }
 
-    public Advertisement? Ad         { get; set; }
+    public Advertisement? Ad          { get; set; }
     public bool           IsFavorited { get; set; }
     public bool           IsOwner     { get; set; }
-    public List<AdImage>  Images      { get; set; } = new();  // НОВОЕ
+    public List<AdImage>  Images      { get; set; } = new();
 
     [BindProperty] public string MessageText { get; set; } = string.Empty;
 
@@ -23,8 +23,10 @@ public class DetailModel : PageModel
         Ad = await _db.Advertisements
             .Include(a => a.User)
             .Include(a => a.Category)
+            .Include(a => a.Subcategory)
             .Include(a => a.Location)
-            .Include(a => a.Images)          // НОВОЕ
+            .Include(a => a.Images)
+            .Include(a => a.Attributes)
             .FirstOrDefaultAsync(a => a.AdID == id);
 
         if (Ad == null) return NotFound();

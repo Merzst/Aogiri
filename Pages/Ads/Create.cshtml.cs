@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Aogiri.Data;
 using Aogiri.Models;
+using Aogiri.Helpers;
 
 namespace Aogiri.Pages.Ads;
 
@@ -12,16 +13,22 @@ public class CreateModel : PageModel
     private readonly IWebHostEnvironment  _env;
     public CreateModel(ApplicationDbContext db, IWebHostEnvironment env) { _db = db; _env = env; }
 
-    public List<Category> Categories { get; set; } = new();
-    public List<Location> Locations  { get; set; } = new();
+    public List<Category>    Categories   { get; set; } = new();
+    public List<Subcategory> Subcategories{ get; set; } = new();
+    public List<Location>    Locations    { get; set; } = new();
 
-    [BindProperty] public string       Title       { get; set; } = string.Empty;
-    [BindProperty] public string?      Description { get; set; }
-    [BindProperty] public decimal      Price       { get; set; }
-    [BindProperty] public int          CategoryID  { get; set; }
-    [BindProperty] public int          LocationID  { get; set; }
+    /// <summary>JSON-описание динамических полей для JS</summary>
+    public string CategoryFieldsJson { get; set; } = "{}";
 
-    // ── ИЗМЕНЕНО: несколько файлов ───────────────────────────
+    [BindProperty] public string       Title         { get; set; } = string.Empty;
+    [BindProperty] public string?      Description   { get; set; }
+    [BindProperty] public decimal      Price         { get; set; }
+    [BindProperty] public int          CategoryID    { get; set; }
+    [BindProperty] public int?         SubcategoryID { get; set; }
+    [BindProperty] public int          LocationID    { get; set; }
+    [BindProperty] public string?      Condition     { get; set; }
+    [BindProperty] public string?      DealType      { get; set; }
+
     [BindProperty] public List<IFormFile>? Images { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
@@ -58,22 +65,41 @@ public class CreateModel : PageModel
             Description     = Description,
             Price           = Price,
             CategoryID      = CategoryID,
+            SubcategoryID   = SubcategoryID,
             LocationID      = LocationID,
             UserID          = uid.Value,
             Status          = status,
             RejectionReason = reason,
+            Condition       = Condition,
+            DealType        = DealType,
             PublishedDate   = DateTime.UtcNow,
             ExpiryDate      = DateTime.UtcNow.AddDays(30)
         };
         _db.Advertisements.Add(ad);
         await _db.SaveChangesAsync();   // нужен AdID
 
-        // ── Сохраняем фото ───────────────────────────────────
+        // ── Динамические атрибуты по категории ──────────────────────────
+        var fields = CategoryFields.GetFields(CategoryID);
+        foreach (var field in fields)
+        {
+            var val = Request.Form[$"attr_{field.Key}"].ToString().Trim();
+            if (!string.IsNullOrEmpty(val))
+            {
+                _db.AdAttributes.Add(new AdAttribute
+                {
+                    AdID  = ad.AdID,
+                    Key   = field.Key,
+                    Value = val
+                });
+            }
+        }
+
+        // ── Сохраняем фото ───────────────────────────────────────────────
         if (Images != null && Images.Count > 0)
         {
             var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
             int order   = 0;
-            foreach (var img in Images.Take(10))            // не более 10
+            foreach (var img in Images.Take(10))
             {
                 if (img.Length == 0) continue;
                 var ext = Path.GetExtension(img.FileName).ToLower();
@@ -87,11 +113,12 @@ public class CreateModel : PageModel
 
                 _db.AdImages.Add(new AdImage { AdID = ad.AdID, ImageUrl = url, SortOrder = order });
 
-                if (order == 0) ad.ImageUrl = url;  // обложка для листинга
+                if (order == 0) ad.ImageUrl = url;
                 order++;
             }
-            await _db.SaveChangesAsync();
         }
+
+        await _db.SaveChangesAsync();
 
         TempData["Success"] = status == "Pending"
             ? "Объявление отправлено на модерацию!"
@@ -101,7 +128,9 @@ public class CreateModel : PageModel
 
     private async Task LoadLists()
     {
-        Categories = await _db.Categories.OrderBy(c => c.Name).ToListAsync();
-        Locations  = await _db.Locations.OrderBy(l => l.City).ToListAsync();
+        Categories    = await _db.Categories.OrderBy(c => c.Name).ToListAsync();
+        Subcategories = await _db.Subcategories.Include(s => s.Category).OrderBy(s => s.Name).ToListAsync();
+        Locations     = await _db.Locations.OrderBy(l => l.City).ToListAsync();
+        CategoryFieldsJson = CategoryFields.ToJson();
     }
 }
