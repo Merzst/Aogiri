@@ -18,10 +18,10 @@ builder.Services.AddSignalR();
 
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout        = TimeSpan.FromHours(8);
-    options.Cookie.HttpOnly    = true;
+    options.IdleTimeout = TimeSpan.FromHours(8);
+    options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.Name        = "AogiriSession";
+    options.Cookie.Name = "AogiriSession";
 });
 
 builder.Services.AddHttpContextAccessor();
@@ -45,10 +45,18 @@ app.MapRazorPages();
 // ── Маршрут хаба ────────────────────────────────────────────
 app.MapHub<ChatHub>("/chatHub");
 
+// ── Миграции и папка uploads ─────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    try { db.Database.Migrate(); } catch { }
+    var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+
+    try { db.Database.Migrate(); } catch { /* игнорируем если уже применены */ }
+
+    // Гарантируем существование папки для загрузок
+    var uploadsPath = Path.Combine(env.WebRootPath, "uploads");
+    if (!Directory.Exists(uploadsPath))
+        Directory.CreateDirectory(uploadsPath);
 }
 
 app.Run();

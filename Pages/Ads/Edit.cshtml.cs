@@ -10,29 +10,31 @@ namespace Aogiri.Pages.Ads;
 public class EditModel : PageModel
 {
     private readonly ApplicationDbContext _db;
-    private readonly IWebHostEnvironment  _env;
-    public EditModel(ApplicationDbContext db, IWebHostEnvironment env) { _db = db; _env = env; }
+    private readonly IWebHostEnvironment _env;
 
-    public List<Category>    Categories     { get; set; } = new();
-    public List<Subcategory> Subcategories  { get; set; } = new();
-    public List<Location>    Locations      { get; set; } = new();
-    public List<AdImage>     ExistingImages { get; set; } = new();
-    public Advertisement?    Ad             { get; set; }
+    public EditModel(ApplicationDbContext db, IWebHostEnvironment env)
+    { _db = db; _env = env; }
+
+    public List<Category> Categories { get; set; } = new();
+    public List<Subcategory> Subcategories { get; set; } = new();
+    public List<Location> Locations { get; set; } = new();
+    public List<AdImage> ExistingImages { get; set; } = new();
+    public Advertisement? Ad { get; set; }
 
     /// <summary>JSON-описание динамических полей для JS</summary>
     public string CategoryFieldsJson { get; set; } = "{}";
 
-    [BindProperty] public string  Title         { get; set; } = string.Empty;
-    [BindProperty] public string? Description   { get; set; }
-    [BindProperty] public decimal Price         { get; set; }
-    [BindProperty] public int     CategoryID    { get; set; }
-    [BindProperty] public int?    SubcategoryID { get; set; }
-    [BindProperty] public int     LocationID    { get; set; }
-    [BindProperty] public string? Condition     { get; set; }
-    [BindProperty] public string? DealType      { get; set; }
+    [BindProperty] public string Title { get; set; } = string.Empty;
+    [BindProperty] public string? Description { get; set; }
+    [BindProperty] public decimal Price { get; set; }
+    [BindProperty] public int CategoryID { get; set; }
+    [BindProperty] public int? SubcategoryID { get; set; }
+    [BindProperty] public int LocationID { get; set; }
+    [BindProperty] public string? Condition { get; set; }
+    [BindProperty] public string? DealType { get; set; }
 
-    [BindProperty] public List<IFormFile>? NewImages    { get; set; }
-    [BindProperty] public List<int>?       DeleteImages { get; set; }
+    [BindProperty] public List<IFormFile>? NewImages { get; set; }
+    [BindProperty] public List<int>? DeleteImages { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
@@ -43,16 +45,18 @@ public class EditModel : PageModel
             .Include(a => a.Images)
             .Include(a => a.Attributes)
             .FirstOrDefaultAsync(a => a.AdID == id);
-        if (Ad == null || Ad.UserID != uid) return Forbid();
 
-        Title         = Ad.Title;
-        Description   = Ad.Description;
-        Price         = Ad.Price;
-        CategoryID    = Ad.CategoryID;
+        if (Ad == null) return NotFound();
+        if (Ad.UserID != uid) return Forbid();
+
+        Title = Ad.Title;
+        Description = Ad.Description;
+        Price = Ad.Price;
+        CategoryID = Ad.CategoryID;
         SubcategoryID = Ad.SubcategoryID;
-        LocationID    = Ad.LocationID;
-        Condition     = Ad.Condition;
-        DealType      = Ad.DealType;
+        LocationID = Ad.LocationID;
+        Condition = Ad.Condition;
+        DealType = Ad.DealType;
 
         ExistingImages = Ad.Images.OrderBy(i => i.SortOrder).ToList();
         await LoadLists();
@@ -68,7 +72,9 @@ public class EditModel : PageModel
             .Include(a => a.Images)
             .Include(a => a.Attributes)
             .FirstOrDefaultAsync(a => a.AdID == id);
-        if (Ad == null || Ad.UserID != uid) return Forbid();
+
+        if (Ad == null) return NotFound();
+        if (Ad.UserID != uid) return Forbid();
 
         if (string.IsNullOrWhiteSpace(Title))
         {
@@ -78,7 +84,7 @@ public class EditModel : PageModel
             return Page();
         }
 
-        // Удаляем помеченные фото
+        // ── Удаляем помеченные фото ──────────────────────────
         var toDelete = DeleteImages ?? new List<int>();
         foreach (var imgId in toDelete)
         {
@@ -88,12 +94,13 @@ public class EditModel : PageModel
             _db.AdImages.Remove(img);
         }
 
-        // Удаляем старые атрибуты и пересохраняем
+        // ── Удаляем старые атрибуты — пересохраняем заново ──
         _db.AdAttributes.RemoveRange(Ad.Attributes);
 
-        // Добавляем новые фото
+        // ── Добавляем новые фото ─────────────────────────────
         if (NewImages != null && NewImages.Count > 0)
         {
+            EnsureUploadsFolder();
             var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
             int maxOrder = await _db.AdImages
                 .Where(i => i.AdID == id && !toDelete.Contains(i.AdImageID))
@@ -113,28 +120,28 @@ public class EditModel : PageModel
 
                 _db.AdImages.Add(new AdImage
                 {
-                    AdID      = id,
-                    ImageUrl  = $"/uploads/{fileName}",
+                    AdID = id,
+                    ImageUrl = $"/uploads/{fileName}",
                     SortOrder = ++maxOrder
                 });
             }
         }
 
-        // Обновляем основные поля
-        Ad.Title           = Title;
-        Ad.Description     = Description;
-        Ad.Price           = Price;
-        Ad.CategoryID      = CategoryID;
-        Ad.SubcategoryID   = SubcategoryID;
-        Ad.LocationID      = LocationID;
-        Ad.Condition       = Condition;
-        Ad.DealType        = DealType;
-        Ad.Status          = "Pending";
+        // ── Обновляем основные поля ──────────────────────────
+        Ad.Title = Title.Trim();
+        Ad.Description = Description?.Trim();
+        Ad.Price = Price;
+        Ad.CategoryID = CategoryID;
+        Ad.SubcategoryID = SubcategoryID;
+        Ad.LocationID = LocationID;
+        Ad.Condition = Condition;
+        Ad.DealType = DealType;
+        Ad.Status = "Pending";
         Ad.RejectionReason = null;
 
         await _db.SaveChangesAsync();
 
-        // Сохраняем динамические атрибуты
+        // ── Сохраняем динамические атрибуты ─────────────────
         var fields = CategoryFields.GetFields(CategoryID);
         foreach (var field in fields)
         {
@@ -143,14 +150,14 @@ public class EditModel : PageModel
             {
                 _db.AdAttributes.Add(new AdAttribute
                 {
-                    AdID  = id,
-                    Key   = field.Key,
+                    AdID = id,
+                    Key = field.Key,
                     Value = val
                 });
             }
         }
 
-        // Обновляем обложку — первое оставшееся фото
+        // ── Обновляем обложку — первое оставшееся фото ──────
         var coverImg = await _db.AdImages
             .Where(i => i.AdID == id)
             .OrderBy(i => i.SortOrder)
@@ -165,10 +172,17 @@ public class EditModel : PageModel
 
     private async Task LoadLists()
     {
-        Categories    = await _db.Categories.OrderBy(c => c.Name).ToListAsync();
+        Categories = await _db.Categories.OrderBy(c => c.Name).ToListAsync();
         Subcategories = await _db.Subcategories.Include(s => s.Category).OrderBy(s => s.Name).ToListAsync();
-        Locations     = await _db.Locations.OrderBy(l => l.City).ToListAsync();
+        Locations = await _db.Locations.OrderBy(l => l.City).ToListAsync();
         CategoryFieldsJson = CategoryFields.ToJson();
+    }
+
+    private void EnsureUploadsFolder()
+    {
+        var uploadsPath = Path.Combine(_env.WebRootPath, "uploads");
+        if (!Directory.Exists(uploadsPath))
+            Directory.CreateDirectory(uploadsPath);
     }
 
     private void DeleteFile(string? url)

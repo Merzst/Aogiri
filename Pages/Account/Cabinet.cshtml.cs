@@ -9,24 +9,24 @@ namespace Aogiri.Pages.Account;
 public class CabinetModel : PageModel
 {
     private readonly ApplicationDbContext _db;
-    private readonly IWebHostEnvironment  _env;
+    private readonly IWebHostEnvironment _env;
 
     public CabinetModel(ApplicationDbContext db, IWebHostEnvironment env)
     { _db = db; _env = env; }
 
-    public User?               CurrentUser  { get; set; }
-    public List<Advertisement> MyAds        { get; set; } = new();
-    public int ActiveCount  { get; set; }
+    public User? CurrentUser { get; set; }
+    public List<Advertisement> MyAds { get; set; } = new();
+    public int ActiveCount { get; set; }
     public int PendingCount { get; set; }
-    public int TotalViews   { get; set; }
+    public int TotalViews { get; set; }
 
-    [BindProperty] public string     Name            { get; set; } = string.Empty;
-    [BindProperty] public string     Phone           { get; set; } = string.Empty;
-    [BindProperty] public string?    Email           { get; set; }
-    [BindProperty] public IFormFile? Avatar          { get; set; }
-    [BindProperty] public string     OldPassword     { get; set; } = string.Empty;
-    [BindProperty] public string     NewPassword     { get; set; } = string.Empty;
-    [BindProperty] public string     ConfirmPassword { get; set; } = string.Empty;
+    [BindProperty] public string Name { get; set; } = string.Empty;
+    [BindProperty] public string Phone { get; set; } = string.Empty;
+    [BindProperty] public string? Email { get; set; }
+    [BindProperty] public IFormFile? Avatar { get; set; }
+    [BindProperty] public string OldPassword { get; set; } = string.Empty;
+    [BindProperty] public string NewPassword { get; set; } = string.Empty;
+    [BindProperty] public string ConfirmPassword { get; set; } = string.Empty;
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -36,7 +36,7 @@ public class CabinetModel : PageModel
         CurrentUser = await _db.Users.FindAsync(uid);
         if (CurrentUser == null) return RedirectToPage("/Account/Login");
 
-        Name  = CurrentUser.Name;
+        Name = CurrentUser.Name;
         Phone = CurrentUser.Phone;
         Email = CurrentUser.Email;
 
@@ -45,11 +45,12 @@ public class CabinetModel : PageModel
             .Include(a => a.Subcategory)
             .Include(a => a.Location)
             .Where(a => a.UserID == uid && a.Status != "Deleted")
-            .OrderByDescending(a => a.PublishedDate).ToListAsync();
+            .OrderByDescending(a => a.PublishedDate)
+            .ToListAsync();
 
-        ActiveCount  = MyAds.Count(a => a.Status == "Active");
+        ActiveCount = MyAds.Count(a => a.Status == "Active");
         PendingCount = MyAds.Count(a => a.Status == "Pending");
-        TotalViews   = MyAds.Sum(a => a.ViewCount);
+        TotalViews = MyAds.Sum(a => a.ViewCount);
         return Page();
     }
 
@@ -66,27 +67,30 @@ public class CabinetModel : PageModel
         if (Avatar != null && Avatar.Length > 0)
         {
             var ext = Path.GetExtension(Avatar.FileName).ToLower();
-            if (new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" }.Contains(ext))
-            {
-                if (!string.IsNullOrEmpty(user.AvatarUrl) && user.AvatarUrl.StartsWith("/uploads/"))
-                {
-                    var old = Path.Combine(_env.WebRootPath,
-                        user.AvatarUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                    if (System.IO.File.Exists(old)) System.IO.File.Delete(old);
-                }
-                var fileName = $"avatar_{uid}_{Guid.NewGuid():N}{ext}";
-                var savePath = Path.Combine(_env.WebRootPath, "uploads", fileName);
-                using var fs = System.IO.File.Create(savePath);
-                await Avatar.CopyToAsync(fs);
-                user.AvatarUrl = $"/uploads/{fileName}";
-            }
-            else
+            if (!new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" }.Contains(ext))
             { TempData["Error"] = "Формат аватарки должен быть JPG, PNG, WEBP или GIF"; return RedirectToPage(); }
+
+            // Удаляем старую аватарку
+            if (!string.IsNullOrEmpty(user.AvatarUrl) && user.AvatarUrl.StartsWith("/uploads/"))
+            {
+                var old = Path.Combine(_env.WebRootPath,
+                    user.AvatarUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(old)) System.IO.File.Delete(old);
+            }
+
+            EnsureUploadsFolder();
+            var fileName = $"avatar_{uid}_{Guid.NewGuid():N}{ext}";
+            var savePath = Path.Combine(_env.WebRootPath, "uploads", fileName);
+            using var fs = System.IO.File.Create(savePath);
+            await Avatar.CopyToAsync(fs);
+            user.AvatarUrl = $"/uploads/{fileName}";
         }
 
-        user.Name = Name; user.Phone = Phone; user.Email = Email;
+        user.Name = Name.Trim();
+        user.Phone = Phone.Trim();
+        user.Email = Email?.Trim();
         await _db.SaveChangesAsync();
-        HttpContext.Session.SetString("UserName", Name);
+        HttpContext.Session.SetString("UserName", user.Name);
         TempData["Success"] = "Профиль обновлён";
         return RedirectToPage();
     }
@@ -99,7 +103,7 @@ public class CabinetModel : PageModel
         if (user == null) return RedirectToPage("/Account/Login");
 
         if (string.IsNullOrWhiteSpace(OldPassword) ||
-            string.IsNullOrWhiteSpace(NewPassword)  ||
+            string.IsNullOrWhiteSpace(NewPassword) ||
             string.IsNullOrWhiteSpace(ConfirmPassword))
         { TempData["Error"] = "Заполните все поля смены пароля"; return RedirectToPage(); }
 
@@ -121,14 +125,15 @@ public class CabinetModel : PageModel
     public async Task<IActionResult> OnPostRenewAdAsync(int adId)
     {
         var uid = HttpContext.Session.GetInt32("UserId");
-        var ad  = await _db.Advertisements.FindAsync(adId);
+        var ad = await _db.Advertisements.FindAsync(adId);
         if (ad == null || ad.UserID != uid) return Forbid();
 
         if (ad.Status != "Active" && ad.Status != "Inactive")
         { TempData["Error"] = "Продлить можно только активное или неактивное объявление"; return RedirectToPage(); }
 
         ad.ExpiryDate = (ad.ExpiryDate.HasValue && ad.ExpiryDate > DateTime.UtcNow
-            ? ad.ExpiryDate.Value : DateTime.UtcNow).AddDays(30);
+            ? ad.ExpiryDate.Value
+            : DateTime.UtcNow).AddDays(30);
 
         if (ad.Status == "Inactive")
         {
@@ -146,7 +151,7 @@ public class CabinetModel : PageModel
 
     public async Task<IActionResult> OnPostRemoveAvatarAsync()
     {
-        var uid  = HttpContext.Session.GetInt32("UserId");
+        var uid = HttpContext.Session.GetInt32("UserId");
         if (uid == null) return RedirectToPage("/Account/Login");
         var user = await _db.Users.FindAsync(uid);
         if (user == null) return RedirectToPage("/Account/Login");
@@ -166,7 +171,7 @@ public class CabinetModel : PageModel
     public async Task<IActionResult> OnPostDeleteAdAsync(int adId)
     {
         var uid = HttpContext.Session.GetInt32("UserId");
-        var ad  = await _db.Advertisements.FindAsync(adId);
+        var ad = await _db.Advertisements.FindAsync(adId);
         if (ad == null || ad.UserID != uid) return Forbid();
         ad.Status = "Deleted";
         await _db.SaveChangesAsync();
@@ -177,7 +182,7 @@ public class CabinetModel : PageModel
     public async Task<IActionResult> OnPostDeactivateAdAsync(int adId)
     {
         var uid = HttpContext.Session.GetInt32("UserId");
-        var ad  = await _db.Advertisements.FindAsync(adId);
+        var ad = await _db.Advertisements.FindAsync(adId);
         if (ad == null || ad.UserID != uid) return Forbid();
 
         if (ad.Status == "Active")
@@ -198,5 +203,12 @@ public class CabinetModel : PageModel
         }
 
         return RedirectToPage();
+    }
+
+    private void EnsureUploadsFolder()
+    {
+        var uploadsPath = Path.Combine(_env.WebRootPath, "uploads");
+        if (!Directory.Exists(uploadsPath))
+            Directory.CreateDirectory(uploadsPath);
     }
 }
